@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Professional Patient Care Report (PCR) Management System for Healthcare Professionals" />
+    <meta name="keywords" content="PCR, Patient Care Report, Healthcare, EMS, Medical Documentation" />
+    <title>PCR System - Patient Care Report Management</title>
+    
+    <!-- Preconnect to external resources for better performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Inter font for better typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#0ea5e9" />
+    
+    <!-- Prevent FOUC (Flash of Unstyled Content) -->
+    <style>
+      body {
+        margin: 0;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        line-height: 1.5;
+      }
+      
+      /* Loading spinner for initial page load */
+      .loading-container {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f9fafb;
+        z-index: 9999;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e5e7eb;
+        border-top: 3px solid #0ea5e9;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      .loading-text {
+        margin-top: 16px;
+        color: #6b7280;
+        font-size: 14px;
+      }
+      
+      /* Dark mode loading screen */
+      @media (prefers-color-scheme: dark) {
+        .loading-container {
+          background: #111827;
+        }
+        .loading-text {
+          color: #9ca3af;
+        }
+        .loading-spinner {
+          border: 3px solid #374151;
+          border-top: 3px solid #0ea5e9;
+        }
+      }
+      
+      /* Hide scrollbar during initial load */
+      html {
+        overflow: hidden;
+      }
+      
+      /* Grid pattern for background */
+      .bg-grid-pattern {
+        background-image: 
+          linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+        background-size: 20px 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <!-- Loading screen shown until React app loads -->
+      <div class="loading-container">
+        <div style="text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+            <div style="width: 32px; height: 32px; background: #0ea5e9; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+              <svg width="18" height="18" fill="white" viewBox="0 0 24 24">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+              </svg>
+            </div>
+            <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #111827;">PCR System</h1>
+          </div>
+          <div class="loading-spinner"></div>
+          <div class="loading-text">Loading Healthcare Management System...</div>
+        </div>
+      </div>
+    </div>
+    
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Enable scrolling after React loads -->
+    <script>
+      window.addEventListener('load', function() {
+        document.documentElement.style.overflow = 'unset';
+      });
+    </script>
+    
+    <!-- Service Worker for offline functionality (optional) -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('SW registered: ', registration);
+            })
+            .catch(function(registrationError) {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>

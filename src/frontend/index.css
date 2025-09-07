@@ -1,0 +1,264 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+  /* Font imports */
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  /* Root variables */
+  :root {
+    --shadow-color: 220deg 3% 15%;
+    --shadow-strength: 1%;
+  }
+
+  /* Improved focus styles */
+  *:focus {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  }
+
+  /* Custom scrollbar styles */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+
+  /* Print styles */
+  @media print {
+    @page {
+      margin: 0.5in;
+    }
+    
+    .no-print {
+      display: none !important;
+    }
+
+    .print-break-inside-avoid {
+      break-inside: avoid;
+    }
+
+    .print-break-after {
+      break-after: page;
+    }
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  /* Button variants */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply btn bg-secondary-600 text-white hover:bg-secondary-700 focus:ring-secondary-500;
+  }
+
+  .btn-success {
+    @apply btn bg-success-600 text-white hover:bg-success-700 focus:ring-success-500;
+  }
+
+  .btn-warning {
+    @apply btn bg-warning-600 text-white hover:bg-warning-700 focus:ring-warning-500;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500;
+  }
+
+  .btn-outline {
+    @apply btn border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-500;
+  }
+
+  .btn-ghost {
+    @apply btn text-gray-700 hover:bg-gray-100 focus:ring-gray-500;
+  }
+
+  /* Form inputs */
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500;
+  }
+
+  .form-textarea {
+    @apply form-input min-h-[100px] resize-vertical;
+  }
+
+  .form-select {
+    @apply form-input pr-10 cursor-pointer;
+  }
+
+  .form-checkbox, .form-radio {
+    @apply h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+
+  .form-error {
+    @apply text-sm text-danger-600 mt-1;
+  }
+
+  .form-help {
+    @apply text-sm text-gray-500 mt-1;
+  }
+
+  /* Card components */
+  .card {
+    @apply bg-white rounded-lg shadow-card border border-gray-200;
+  }
+
+  .card-header {
+    @apply px-6 py-4 border-b border-gray-200;
+  }
+
+  .card-body {
+    @apply px-6 py-4;
+  }
+
+  .card-footer {
+    @apply px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg;
+  }
+
+  /* Alert components */
+  .alert {
+    @apply p-4 rounded-lg border-l-4;
+  }
+
+  .alert-info {
+    @apply alert bg-blue-50 border-blue-400 text-blue-800;
+  }
+
+  .alert-success {
+    @apply alert bg-success-50 border-success-400 text-success-800;
+  }
+
+  .alert-warning {
+    @apply alert bg-warning-50 border-warning-400 text-warning-800;
+  }
+
+  .alert-error {
+    @apply alert bg-danger-50 border-danger-400 text-danger-800;
+  }
+
+  /* Loading spinner */
+  .spinner {
+    @apply animate-spin rounded-full border-2 border-gray-200 border-t-primary-600;
+  }
+
+  /* Medical form specific styles */
+  .vital-signs-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
+  }
+
+  .medication-row {
+    @apply grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border border-gray-200 rounded-lg;
+  }
+
+  /* Print-specific styles for PCR reports */
+  .pcr-print {
+    @apply text-sm leading-tight;
+  }
+
+  .pcr-section {
+    @apply mb-6 print-break-inside-avoid;
+  }
+
+  .pcr-header {
+    @apply text-lg font-bold border-b border-gray-300 pb-2 mb-4;
+  }
+
+  .pcr-field {
+    @apply mb-2;
+  }
+
+  .pcr-field-label {
+    @apply font-medium text-gray-700 mr-2;
+  }
+
+  .pcr-field-value {
+    @apply text-gray-900;
+  }
+
+  /* Responsive table styles */
+  .responsive-table {
+    @apply w-full overflow-x-auto;
+  }
+
+  .responsive-table table {
+    @apply min-w-full divide-y divide-gray-200;
+  }
+
+  .responsive-table th {
+    @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50;
+  }
+
+  .responsive-table td {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  /* Custom shadows with color variables */
+  .shadow-medical {
+    box-shadow: 
+      0px 0.3px 0.4px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .03)),
+      0px 0.5px 0.6px -1.2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .03)),
+      0px 1.3px 1.5px -2.5px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .06));
+  }
+
+  .shadow-card {
+    box-shadow: 
+      0px 0.6px 0.7px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .36)),
+      0px 1px 1.1px -0.8px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .36)),
+      0px 2.5px 2.8px -1.7px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .36)),
+      0px 6.2px 7px -2.5px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .36));
+  }
+
+  /* Text utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Layout utilities */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Animation utilities */
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  /* Dark mode utilities (for future implementation) */
+  @media (prefers-color-scheme: dark) {
+    .dark-mode-auto {
+      @apply bg-gray-900 text-gray-100;
+    }
+  }
+}

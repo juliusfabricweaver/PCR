@@ -1,0 +1,31 @@
+import { ValidationError } from '../types';
+export declare const formatDate: (date: string | Date, format?: "short" | "long" | "datetime") => string;
+export declare const formatTime: (date: string | Date) => string;
+export declare const getCurrentDateTime: () => string;
+export declare const isValidDate: (date: string) => boolean;
+export declare const capitalize: (str: string) => string;
+export declare const formatName: (firstName: string, lastName: string) => string;
+export declare const formatSSN: (ssn: string) => string;
+export declare const formatPhoneNumber: (phone: string) => string;
+export declare const maskSSN: (ssn: string) => string;
+export declare const validateEmail: (email: string) => boolean;
+export declare const validatePhone: (phone: string) => boolean;
+export declare const validateSSN: (ssn: string) => boolean;
+export declare const validateZipCode: (zipCode: string) => boolean;
+export declare const validatePassword: (password: string) => ValidationError[];
+export declare const calculateAge: (dateOfBirth: string) => number;
+export declare const formatVitalSigns: (systolic: number, diastolic: number) => string;
+export declare const getPainDescription: (scale: number) => string;
+export declare const groupBy: <T>(array: T[], key: keyof T) => Record<string, T[]>;
+export declare const sortBy: <T>(array: T[], key: keyof T, direction?: "asc" | "desc") => T[];
+export declare const omit: <T extends Record<string, any>, K extends keyof T>(obj: T, keys: K[]) => Omit<T, K>;
+export declare const pick: <T extends Record<string, any>, K extends keyof T>(obj: T, keys: K[]) => Pick<T, K>;
+export declare const storage: {
+    get: (key: string) => any;
+    set: (key: string, value: any) => void;
+    remove: (key: string) => void;
+};
+export declare const debounce: <T extends (...args: any[]) => any>(func: T, wait: number) => ((...args: Parameters<T>) => void);
+export declare const generateId: () => string;
+export declare const handleError: (error: unknown) => string;
+//# sourceMappingURL=index.d.ts.map
