@@ -8,7 +8,7 @@
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
     "frontend:dev": "vite",
     "frontend:build": "vite build",
-    "backend:dev": "nodemon src/backend/src/index.ts",
+    "backend:dev": "npx ts-node --transpile-only src/backend/src/index.ts",
     "backend:build": "tsc -p src/backend/tsconfig.json",
     "create-accounts": "ts-node src/backend/src/scripts/create-users.ts",
     "build": "npm run frontend:build && npm run backend:build",
