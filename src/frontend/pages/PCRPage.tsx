@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Save, Send, RotateCcw, AlertTriangle, Clock, CheckCircle } from 'lucide-react'
+import React, { useState } from 'react'
+import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle } from 'lucide-react'
 import { Button, Card, Alert, Modal } from '@/components/ui'
 import {
   Input,
@@ -14,7 +14,6 @@ import {
 import { VitalSignsTable, InjuryCanvas, OxygenProtocolForm } from '@/components/composite'
 import { useForm } from '../context/FormContext'
 import { useNotification } from '../context/NotificationContext'
-import { useAutosave } from '../hooks'
 import { cn, getCurrentTime, formatDate } from '../utils'
 import { pdfService } from '../services/pdf.service'
 import type { PCRFormData, VitalSign, VitalSigns2 } from '../types'
@@ -26,37 +25,6 @@ const PCRPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [testMode, setTestMode] = useState(false)
 
-  // Auto-save functionality with database backend
-  const { loadDraft, clearDraft, hasDraft, saveNow } = useAutosave({
-    key: 'pcr-form',
-    data,
-    enabled: true,
-    enableBackendSync: true,  // Enable database saving
-    offlineMode: false,       // Enable database sync
-    interval: 300000,         // Increase to 5 minutes to reduce storage pressure
-    onSave: async formData => {
-      console.log('Form data saved locally:', formData)
-    },
-  })
-
-  // Load draft on component mount
-  useEffect(() => {
-    const checkAndLoadDraft = async () => {
-      const hasSavedDraft = await hasDraft()
-      if (hasSavedDraft) {
-        const draft = await loadDraft()
-        if (draft && draft.age < 24 * 60 * 60 * 1000) {
-          // Less than 24 hours old
-          showNotification(`Draft loaded from ${draft.timestamp.toLocaleString()}`, 'info')
-          // Load draft data into form context
-          Object.entries(draft.data).forEach(([key, value]) => {
-            updateField(key as keyof PCRFormData, value)
-          })
-        }
-      }
-    }
-    checkAndLoadDraft()
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -80,7 +48,7 @@ const PCRPage: React.FC = () => {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}` // Assuming token auth
+                'Authorization': `Bearer ${localStorage.getItem('pcr_token')}`
               },
               body: JSON.stringify({
                 data: {
@@ -96,7 +64,6 @@ const PCRPage: React.FC = () => {
             }
 
             showNotification('PCR form submitted successfully', 'success')
-            clearDraft()
             reset()
           } catch (submitError) {
             console.error('Submission failed:', submitError)
@@ -120,14 +87,12 @@ const PCRPage: React.FC = () => {
       setShowUnsavedChangesModal(true)
     } else {
       reset()
-      clearDraft()
       showNotification('Form reset successfully', 'success')
     }
   }
 
   const confirmReset = () => {
     reset()
-    clearDraft()
     setShowUnsavedChangesModal(false)
     showNotification('Form reset successfully', 'success')
   }
@@ -894,14 +859,6 @@ const PCRPage: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-3">
-            <Button 
-              type="button" 
-              variant="secondary" 
-              leftIcon={<Save className="w-4 h-4" />}
-              onClick={() => saveNow()}
-            >
-              Save Draft
-            </Button>
 
             <div className="relative">
               <Button

@@ -13,15 +13,9 @@ export const API_ENDPOINTS = {
     REFRESH: '/api/auth/refresh',
     PROFILE: '/api/auth/profile',
   },
-  PATIENTS: {
-    BASE: '/api/patients',
-    BY_ID: (id: string) => `/api/patients/${id}`,
-    SEARCH: '/api/patients/search',
-  },
   PCR: {
     BASE: '/api/pcr',
     BY_ID: (id: string) => `/api/pcr/${id}`,
-    BY_PATIENT: (patientId: string) => `/api/pcr/patient/${patientId}`,
     EXPORT_PDF: (id: string) => `/api/pcr/${id}/pdf`,
   },
   USERS: {
@@ -34,8 +28,6 @@ export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
-  PATIENTS: '/patients',
-  PATIENT_DETAIL: '/patients/:id',
   PCR: '/pcr',
   PCR_NEW: '/pcr/new',
   PCR_EDIT: '/pcr/:id/edit',
@@ -48,7 +40,6 @@ export const ROUTES = {
 export const STORAGE_KEYS = {
   AUTH_TOKEN: 'pcr_auth_token',
   USER_PREFERENCES: 'pcr_user_preferences',
-  DRAFT_PCR: 'pcr_draft_',
   THEME: 'pcr_theme',
 } as const
 
