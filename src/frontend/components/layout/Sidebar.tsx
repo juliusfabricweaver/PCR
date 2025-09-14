@@ -68,13 +68,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       href: '/admin/users',
       isActive: currentPath === '/admin/users',
     },
-    {
-      id: 'settings',
-      label: 'System Settings',
-      icon: <Settings className="w-5 h-5" />,
-      href: '/admin/settings',
-      isActive: currentPath === '/admin/settings',
-    },
   ]
 
   const handleItemClick = (href: string) => {
