@@ -105,6 +105,44 @@ const PCRPage: React.FC = () => {
     updateField('vitalSigns2', vitalSigns2)
   }
 
+  const calculateAgeFromDOB = (dob: string): number => {
+    const birthDate = new Date(dob)
+    const today = new Date()
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+
+    return age
+  }
+
+  const handleDOBChange = (dob: string) => {
+    updateField('dob', dob)
+
+    if (dob && dob.trim()) {
+      const calculatedAge = calculateAgeFromDOB(dob)
+      if (calculatedAge >= 0 && calculatedAge <= 150) {
+        updateField('age', calculatedAge.toString())
+      }
+    }
+
+    // Clear age/DOB validation error when either field is updated
+    if (errors.ageOrDob) {
+      validateField('ageOrDob')
+    }
+  }
+
+  const handleAgeChange = (age: string) => {
+    updateField('age', age)
+
+    // Clear age/DOB validation error when either field is updated
+    if (errors.ageOrDob) {
+      validateField('ageOrDob')
+    }
+  }
+
   // Test function to fill sample data
   const fillSampleData = () => {
     const sampleData: Partial<PCRFormData> = {
@@ -359,7 +397,7 @@ const PCRPage: React.FC = () => {
             <DatePicker
               label="Date of Birth"
               value={data.dob || ''}
-              onChange={e => updateField('dob', e.target.value)}
+              onChange={e => handleDOBChange(e.target.value)}
             />
 
             <Input
@@ -368,11 +406,17 @@ const PCRPage: React.FC = () => {
               min="0"
               max="150"
               value={data.age || ''}
-              onChange={e => updateField('age', e.target.value)}
+              onChange={e => handleAgeChange(e.target.value)}
               error={errors.age}
               placeholder="Age in years"
             />
           </div>
+
+          {errors.ageOrDob && (
+            <Alert variant="error" className="mb-4">
+              {errors.ageOrDob}
+            </Alert>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <RadioGroup

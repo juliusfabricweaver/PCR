@@ -20,8 +20,8 @@ type FormAction =
 
 const initialState: FormState = {
   data: {
-    vitalSigns: Array(6).fill({}),
-    vitalSigns2: Array(6).fill({}),
+    vitalSigns: [{}],
+    vitalSigns2: [{}],
     airwayManagement: [],
     hemorrhageControl: [],
     immobilization: [],
@@ -65,6 +65,13 @@ const validationSchema = {
   // Number validation
   age: [(value: string) => !value || (Number(value) >= 0 && Number(value) <= 150), 'Please enter a valid age'],
   scale: [(value: number) => !value || (value >= 1 && value <= 10), 'Scale must be between 1-10'],
+
+  // Age or DOB validation - at least one must be filled
+  ageOrDob: [(data: Partial<PCRFormData>) => {
+    const age = data.age;
+    const dob = data.dob;
+    return !!(age && age.trim()) || !!(dob && dob.trim());
+  }, 'Either age or date of birth must be provided'],
 } as Record<string, [(value: any) => boolean, string][]>
 
 const formReducer = (state: FormState, action: FormAction): FormState => {
@@ -118,8 +125,8 @@ const formReducer = (state: FormState, action: FormAction): FormState => {
       const allErrors: Record<string, string> = {}
       
       Object.entries(validationSchema).forEach(([field, rules]) => {
-        const value = state.data[field as keyof PCRFormData]
-        
+        const value = field === 'ageOrDob' ? state.data : state.data[field as keyof PCRFormData]
+
         for (const [rule, message] of rules) {
           if (!rule(value)) {
             allErrors[field] = message
@@ -177,16 +184,16 @@ export const FormProvider: React.FC<FormProviderProps> = ({ children }) => {
   const validateField = useCallback((field: string): boolean => {
     const rules = validationSchema[field]
     if (!rules) return true
-    
-    const value = state.data[field as keyof PCRFormData]
-    
+
+    const value = field === 'ageOrDob' ? state.data : state.data[field as keyof PCRFormData]
+
     for (const [rule, message] of rules) {
       if (!rule(value)) {
         dispatch({ type: 'SET_ERROR', payload: { field, error: message } })
         return false
       }
     }
-    
+
     dispatch({ type: 'CLEAR_ERROR', payload: { field } })
     return true
   }, [state.data])

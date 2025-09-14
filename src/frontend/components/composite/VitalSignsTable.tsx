@@ -49,7 +49,8 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
 
   const removeRow = useCallback((index: number) => {
     const newData = data.filter((_, i) => i !== index)
-    onChange(newData)
+    // Ensure we always have at least 1 row (even if empty)
+    onChange(newData.length > 0 ? newData : [{}])
   }, [data, onChange])
 
   const addCurrentTime = useCallback((rowIndex: number) => {
@@ -152,13 +153,10 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
             </tr>
           </thead>
           <tbody>
-            {Array.from({ length: maxRows }).map((_, rowIndex) => (
+            {Array.from({ length: Math.max(data.length, 1) }).map((_, rowIndex) => (
               <tr
                 key={rowIndex}
-                className={cn(
-                  'hover:bg-gray-50 dark:hover:bg-gray-700',
-                  rowIndex >= data.length && 'opacity-50'
-                )}
+                className="hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 {columns.map((column) => (
                   <td key={column.key} className="table-editable border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
@@ -178,7 +176,7 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
                         <Clock className="w-3 h-3" />
                       </Button>
                     </Tooltip>
-                    {rowIndex < data.length && data[rowIndex] && Object.values(data[rowIndex]).some(v => v) && (
+                    {rowIndex < data.length && data[rowIndex] && Object.values(data[rowIndex]).some(v => v) && data.length > 1 && (
                       <Tooltip content="Remove row">
                         <Button
                           type="button"
