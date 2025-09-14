@@ -206,4 +206,5 @@ export interface FormContextType {
   isValid: boolean;
   reset: () => void;
   validateField: (field: string) => boolean;
+  loadData: (data: Partial<PCRFormData>) => void;
 }

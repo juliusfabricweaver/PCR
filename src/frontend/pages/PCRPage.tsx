@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Save, Send, RotateCcw, AlertTriangle, Clock, CheckCircle } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save } from 'lucide-react'
 import { Button, Card, Alert, Modal } from '@/components/ui'
 import {
   Input,
@@ -14,49 +14,63 @@ import {
 import { VitalSignsTable, InjuryCanvas, OxygenProtocolForm } from '@/components/composite'
 import { useForm } from '../context/FormContext'
 import { useNotification } from '../context/NotificationContext'
-import { useAutosave } from '../hooks'
+import { useAuth } from '../context/AuthContext'
 import { cn, getCurrentTime, formatDate } from '../utils'
 import { pdfService } from '../services/pdf.service'
 import type { PCRFormData, VitalSign, VitalSigns2 } from '../types'
 
 const PCRPage: React.FC = () => {
-  const { data, updateField, errors, isDirty, isValid, reset, validateField } = useForm()
+  const { data, updateField, errors, isDirty, isValid, reset, validateField, loadData } = useForm()
   const { showNotification } = useNotification()
+  const { token, isAuthenticated } = useAuth()
   const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [testMode, setTestMode] = useState(false)
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false)
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
 
-  // Auto-save functionality with database backend
-  const { loadDraft, clearDraft, hasDraft, saveNow } = useAutosave({
-    key: 'pcr-form',
-    data,
-    enabled: true,
-    enableBackendSync: true,  // Enable database saving
-    offlineMode: false,       // Enable database sync
-    interval: 300000,         // Increase to 5 minutes to reduce storage pressure
-    onSave: async formData => {
-      console.log('Form data saved locally:', formData)
-    },
-  })
-
-  // Load draft on component mount
   useEffect(() => {
-    const checkAndLoadDraft = async () => {
-      const hasSavedDraft = await hasDraft()
-      if (hasSavedDraft) {
-        const draft = await loadDraft()
-        if (draft && draft.age < 24 * 60 * 60 * 1000) {
-          // Less than 24 hours old
-          showNotification(`Draft loaded from ${draft.timestamp.toLocaleString()}`, 'info')
-          // Load draft data into form context
-          Object.entries(draft.data).forEach(([key, value]) => {
-            updateField(key as keyof PCRFormData, value)
+    const loadDraftFromUrl = async () => {
+      const urlParams = new URLSearchParams(window.location.search)
+      const draftId = urlParams.get('draftId')
+
+      if (draftId && isAuthenticated && token) {
+        setIsLoadingDraft(true)
+        setCurrentDraftId(draftId)
+
+        try {
+          const response = await fetch(`/api/pcr/${draftId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
           })
+
+          if (!response.ok) {
+            throw new Error('Failed to load draft')
+          }
+
+          const data = await response.json()
+          const draftData = data.data
+
+          if (draftData.status === 'draft') {
+            loadData(draftData.form_data)
+            showNotification('Draft loaded successfully', 'success')
+          } else {
+            showNotification('This report is not a draft and cannot be edited', 'error')
+          }
+        } catch (error) {
+          console.error('Failed to load draft:', error)
+          showNotification('Failed to load draft', 'error')
+        } finally {
+          setIsLoadingDraft(false)
         }
       }
     }
-    checkAndLoadDraft()
-  }, [])
+
+    loadDraftFromUrl()
+  }, [isAuthenticated, token, loadData, showNotification])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,28 +89,46 @@ const PCRPage: React.FC = () => {
       await pdfService.confirmPrintedWorkflow(data, async (confirmed, timestamp) => {
         if (confirmed) {
           try {
-            // Submit to backend API after PDF is confirmed printed
-            const response = await fetch('/api/submissions', {
-              method: 'POST',
+            // Update existing draft or create new submission
+            const url = currentDraftId ? `/api/pcr/${currentDraftId}` : '/api/submissions'
+            const method = currentDraftId ? 'PUT' : 'POST'
+
+            const response = await fetch(url, {
+              method,
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}` // Assuming token auth
+                'Authorization': `Bearer ${token}`
               },
-              body: JSON.stringify({
-                data: {
-                  ...data,
-                  printedAt: timestamp,
-                  printConfirmed: true
-                }
-              })
+              body: JSON.stringify(
+                currentDraftId
+                  ? {
+                      form_data: {
+                        ...data,
+                        printedAt: timestamp,
+                        printConfirmed: true
+                      },
+                      status: 'submitted'
+                    }
+                  : {
+                      data: {
+                        ...data,
+                        printedAt: timestamp,
+                        printConfirmed: true
+                      }
+                    }
+              )
             })
 
             if (!response.ok) {
               throw new Error('Failed to submit PCR form')
             }
 
-            showNotification('PCR form submitted successfully', 'success')
-            clearDraft()
+            showNotification(
+              currentDraftId
+                ? 'Draft updated and submitted successfully'
+                : 'PCR form submitted successfully',
+              'success'
+            )
             reset()
           } catch (submitError) {
             console.error('Submission failed:', submitError)
@@ -120,16 +152,63 @@ const PCRPage: React.FC = () => {
       setShowUnsavedChangesModal(true)
     } else {
       reset()
-      clearDraft()
       showNotification('Form reset successfully', 'success')
     }
   }
 
   const confirmReset = () => {
     reset()
-    clearDraft()
     setShowUnsavedChangesModal(false)
     showNotification('Form reset successfully', 'success')
+  }
+
+  const handleSaveDraft = async () => {
+    if (!isAuthenticated || !token) {
+      showNotification('Please log in to save drafts', 'error')
+      return
+    }
+
+    setIsSavingDraft(true)
+
+    try {
+      // If we're editing an existing draft, update it. Otherwise create new draft.
+      const url = currentDraftId ? `/api/pcr/${currentDraftId}` : '/api/pcr'
+      const method = currentDraftId ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          form_data: data,
+          status: 'draft'
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save draft')
+      }
+
+      const responseData = await response.json()
+
+      // If this was a new draft, update our current draft ID
+      if (!currentDraftId && responseData.data?.id) {
+        setCurrentDraftId(responseData.data.id)
+        // Update URL to include draft ID for future saves
+        const newUrl = new URL(window.location.href)
+        newUrl.searchParams.set('draftId', responseData.data.id)
+        window.history.replaceState({}, '', newUrl.toString())
+      }
+
+      showNotification('Draft saved successfully', 'success')
+    } catch (error) {
+      console.error('Save draft failed:', error)
+      showNotification('Failed to save draft', 'error')
+    } finally {
+      setIsSavingDraft(false)
+    }
   }
 
   const handleVitalSignsChange = (vitalSigns: VitalSign[]) => {
@@ -138,6 +217,44 @@ const PCRPage: React.FC = () => {
 
   const handleVitalSigns2Change = (vitalSigns2: VitalSigns2[]) => {
     updateField('vitalSigns2', vitalSigns2)
+  }
+
+  const calculateAgeFromDOB = (dob: string): number => {
+    const birthDate = new Date(dob)
+    const today = new Date()
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+
+    return age
+  }
+
+  const handleDOBChange = (dob: string) => {
+    updateField('dob', dob)
+
+    if (dob && dob.trim()) {
+      const calculatedAge = calculateAgeFromDOB(dob)
+      if (calculatedAge >= 0 && calculatedAge <= 150) {
+        updateField('age', calculatedAge.toString())
+      }
+    }
+
+    // Clear age/DOB validation error when either field is updated
+    if (errors.ageOrDob) {
+      validateField('ageOrDob')
+    }
+  }
+
+  const handleAgeChange = (age: string) => {
+    updateField('age', age)
+
+    // Clear age/DOB validation error when either field is updated
+    if (errors.ageOrDob) {
+      validateField('ageOrDob')
+    }
   }
 
   // Test function to fill sample data
@@ -195,10 +312,15 @@ const PCRPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Patient Care Report
+            {currentDraftId ? 'Edit Patient Care Report Draft' : 'Patient Care Report'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Complete all required fields to submit the report
+            {isLoadingDraft
+              ? 'Loading draft...'
+              : currentDraftId
+                ? 'Editing existing draft - complete and submit when ready'
+                : 'Complete all required fields to submit the report'
+            }
           </p>
         </div>
 
@@ -240,6 +362,16 @@ const PCRPage: React.FC = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+        {isLoadingDraft && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="text-gray-900 dark:text-gray-100">Loading draft...</span>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Basic Information */}
         <FormSection
           title="Basic Information"
@@ -394,7 +526,7 @@ const PCRPage: React.FC = () => {
             <DatePicker
               label="Date of Birth"
               value={data.dob || ''}
-              onChange={e => updateField('dob', e.target.value)}
+              onChange={e => handleDOBChange(e.target.value)}
             />
 
             <Input
@@ -403,11 +535,17 @@ const PCRPage: React.FC = () => {
               min="0"
               max="150"
               value={data.age || ''}
-              onChange={e => updateField('age', e.target.value)}
+              onChange={e => handleAgeChange(e.target.value)}
               error={errors.age}
               placeholder="Age in years"
             />
           </div>
+
+          {errors.ageOrDob && (
+            <Alert variant="error" className="mb-4">
+              {errors.ageOrDob}
+            </Alert>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <RadioGroup
@@ -894,13 +1032,15 @@ const PCRPage: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-3">
-            <Button 
-              type="button" 
-              variant="secondary" 
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSaveDraft}
+              loading={isSavingDraft}
+              disabled={isSavingDraft}
               leftIcon={<Save className="w-4 h-4" />}
-              onClick={() => saveNow()}
             >
-              Save Draft
+              {isSavingDraft ? 'Saving...' : 'Save Draft'}
             </Button>
 
             <div className="relative">

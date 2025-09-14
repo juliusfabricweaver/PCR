@@ -38,7 +38,7 @@ const Header: React.FC<HeaderProps> = ({
           >
             <Menu className="w-5 h-5" />
           </Button>
-          
+
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-medical-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">PCR</span>
@@ -64,22 +64,7 @@ const Header: React.FC<HeaderProps> = ({
               onClick={onToggleTheme}
               aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {darkMode ? (
-                <Sun className="w-4 h-4" />
-              ) : (
-                <Moon className="w-4 h-4" />
-              )}
-            </Button>
-          </Tooltip>
-
-          {/* Settings */}
-          <Tooltip content="Settings">
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label="Settings"
-            >
-              <Settings className="w-4 h-4" />
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
           </Tooltip>
 
@@ -88,11 +73,7 @@ const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-gray-200 dark:border-gray-700">
               <div className="flex items-center space-x-2">
                 {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full"
-                  />
+                  <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full" />
                 ) : (
                   <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
                     <User className="w-4 h-4 text-white" />
@@ -102,9 +83,7 @@ const Header: React.FC<HeaderProps> = ({
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {user.name}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                    {user.role}
-                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user.role}</p>
                 </div>
               </div>
 

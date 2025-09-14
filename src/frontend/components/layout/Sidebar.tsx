@@ -16,6 +16,10 @@ interface SidebarProps {
   currentPath?: string
   onNavigate?: (href: string) => void
   onClose?: () => void
+  user?: {
+    name: string
+    role: string
+  }
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -23,6 +27,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   currentPath = '/',
   onNavigate,
   onClose,
+  user,
 }) => {
   const navigationItems: SidebarItem[] = [
     {
@@ -46,6 +51,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       href: '/pcr',
       isActive: currentPath.startsWith('/pcr') && currentPath !== '/pcr/new',
     },
+  ]
+
+  const adminItems: SidebarItem[] = [
     {
       id: 'logs',
       label: 'Activity Logs',
@@ -53,22 +61,12 @@ const Sidebar: React.FC<SidebarProps> = ({
       href: '/logs',
       isActive: currentPath === '/logs',
     },
-  ]
-
-  const adminItems: SidebarItem[] = [
     {
       id: 'users',
       label: 'User Management',
       icon: <Users className="w-5 h-5" />,
       href: '/admin/users',
       isActive: currentPath === '/admin/users',
-    },
-    {
-      id: 'settings',
-      label: 'System Settings',
-      icon: <Settings className="w-5 h-5" />,
-      href: '/admin/settings',
-      isActive: currentPath === '/admin/settings',
     },
   ]
 
@@ -147,16 +145,18 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* Admin section */}
-            <div className="mt-8">
-              <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                Administration
-              </h3>
-              <div className="mt-2 space-y-1">
-                {adminItems.map(item => (
-                  <SidebarItemComponent key={item.id} item={item} />
-                ))}
+            {user?.role === 'admin' && (
+              <div className="mt-8">
+                <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                  Administration
+                </h3>
+                <div className="mt-2 space-y-1">
+                  {adminItems.map(item => (
+                    <SidebarItemComponent key={item.id} item={item} />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </nav>
 
           {/* Footer */}

@@ -146,47 +146,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: 'LOGIN_START' })
 
     try {
-      // Simulate API call
-      console.log('Starting mock authentication...')
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Call actual backend API
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      })
 
-      // Mock authentication - in real app, call actual API
-      let user: User
-      let token: string
+      const result = await response.json()
 
-      if (username === 'admin' && password === 'admin') {
-        user = {
-          id: '1',
-          username,
-          email: 'admin@pcrapp.com',
-          role: 'admin',
-          firstName: 'System',
-          lastName: 'Administrator',
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-        }
-        token = 'mock-jwt-token-admin-' + Math.random()
-      } else if (username === 'user' && password === 'user') {
-        user = {
-          id: '2',
-          username,
-          email: 'user@pcrapp.com',
-          role: 'user',
-          firstName: 'Regular',
-          lastName: 'User',
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-        }
-        token = 'mock-jwt-token-user-' + Math.random()
-      } else {
-        throw new Error('Invalid username or password')
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Login failed')
       }
 
-      // Initialize session (mock)
+      const { user: userData, token, expiresIn } = result.data
+
+      // Map backend user data to frontend User type
+      const user: User = {
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        role: userData.role,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        isActive: userData.isActive,
+        createdAt: userData.createdAt,
+        lastLogin: userData.lastLogin,
+      }
+
+      // Calculate session expiry
+      const expiresAt = new Date(Date.now() + (expiresIn * 1000)).toISOString()
       const sessionId = 'session_' + Math.random().toString(36).substr(2, 9)
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes
 
       sessionService.setAuthToken(token)
 
@@ -197,8 +189,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('pcr_session_expiry', expiresAt)
 
       console.log('Login successful, dispatching LOGIN_SUCCESS')
-      dispatch({ 
-        type: 'LOGIN_SUCCESS', 
+      dispatch({
+        type: 'LOGIN_SUCCESS',
         payload: { user, sessionId, expiresAt }
       })
       console.log('Login complete')
@@ -210,15 +202,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async (): Promise<void> => {
     try {
-      // Invalidate session on server
-      await sessionService.invalidateSession()
+      // Invalidate session on backend
+      const token = localStorage.getItem('pcr_token')
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+      }
     } catch (error) {
       console.warn('Failed to invalidate session on server:', error)
     }
-    
+
     // Clear storage
     clearStoredAuth()
-    
+
     // Clear any form drafts
     const draftKeys = Object.keys(localStorage).filter(key => key.startsWith('pcr_draft_'))
     draftKeys.forEach(key => localStorage.removeItem(key))

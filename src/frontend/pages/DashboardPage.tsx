@@ -179,20 +179,6 @@ const DashboardPage = () => {
                 </div>
               </a>
 
-              <a
-                href="/patients"
-                className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group"
-              >
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center text-primary-600 group-hover:bg-primary-200">
-                    👥
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <h4 className="text-sm font-medium text-gray-900">Patient Search</h4>
-                  <p className="text-sm text-gray-600">Find and manage patient records</p>
-                </div>
-              </a>
 
               <a
                 href="/reports"

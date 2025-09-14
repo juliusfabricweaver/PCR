@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { Layout } from '@/components/layout'
 import { Loading } from '@/components/ui'
-import { LoginPage, PCRPage } from '@/pages'
+import { LoginPage, PCRPage, ActivityLogsPage } from '@/pages'
 import { AuthProvider, NotificationProvider, FormProvider, useAuth } from '@/context'
 import { useTimeout } from '@/hooks'
 import DashboardPage from './pages/DashboardPage'
+import ReportsPage from './pages/ReportsPage'
+import UserManagementPage from './pages/UserManagementPage'
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -122,55 +124,28 @@ const AppContent: React.FC = () => {
           }
         />
 
-        {/* PCR List - Placeholder */}
+        {/* PCR Reports */}
         <Route
           path="/pcr"
-          element={
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                PCR Reports
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">PCR list component coming soon...</p>
-            </div>
-          }
+          element={<ReportsPage />}
         />
 
-        {/* Logs - Placeholder */}
+        {/* Reports Route (alias for /pcr) */}
+        <Route
+          path="/reports"
+          element={<ReportsPage />}
+        />
+
+        {/* Activity Logs */}
         <Route
           path="/logs"
-          element={
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                Activity Logs
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">Activity logs coming soon...</p>
-            </div>
-          }
+          element={<ActivityLogsPage />}
         />
 
         {/* Admin Routes */}
         <Route
           path="/admin/users"
-          element={
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                User Management
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">User management coming soon...</p>
-            </div>
-          }
-        />
-
-        <Route
-          path="/admin/settings"
-          element={
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                System Settings
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">System settings coming soon...</p>
-            </div>
-          }
+          element={<UserManagementPage />}
         />
 
         {/* Default redirect */}
