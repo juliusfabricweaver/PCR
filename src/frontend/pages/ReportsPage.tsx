@@ -31,7 +31,7 @@ const ReportsPage = () => {
         return
       }
 
-      const response = await fetch('/api/pcr?status=submitted', {
+      const response = await fetch('/api/pcr', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -81,6 +81,12 @@ const ReportsPage = () => {
     }
   }
 
+  const handleEditDraft = (reportId: string) => {
+    // Navigate to PCR form with draft ID as URL parameter
+    const params = new URLSearchParams({ draftId: reportId })
+    window.location.href = `/pcr/new?${params.toString()}`
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -110,7 +116,7 @@ const ReportsPage = () => {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">PCR Reports</h1>
         <p className="mt-1 text-sm text-gray-600">
-          View completed PCR submissions
+          View PCR submissions and drafts
         </p>
       </div>
 
@@ -140,7 +146,7 @@ const ReportsPage = () => {
                 </svg>
                 <h3 className="mt-2 text-sm font-medium text-gray-900">No PCR reports</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Complete and submit a PCR form to see reports here.
+                  Create or submit a PCR form to see reports and drafts here.
                 </p>
               </div>
             </div>
@@ -170,8 +176,8 @@ const ReportsPage = () => {
                   {reports.map((report) => (
                     <tr
                       key={report.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => handleViewReport(report.id)}
+                      className={`hover:bg-gray-50 ${report.status === 'submitted' ? 'cursor-pointer' : ''}`}
+                      onClick={report.status === 'submitted' ? () => handleViewReport(report.id) : undefined}
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {report.id}
@@ -196,15 +202,40 @@ const ReportsPage = () => {
                         {formatDate(report.updated_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleViewReport(report.id)
-                          }}
-                          className="text-blue-600 hover:text-blue-900 font-medium"
-                        >
-                          View PDF
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          {report.status === 'draft' ? (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditDraft(report.id)
+                                }}
+                                className="text-blue-600 hover:text-blue-900 font-medium"
+                              >
+                                Edit Draft
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleViewReport(report.id)
+                                }}
+                                className="text-green-600 hover:text-green-900 font-medium"
+                              >
+                                Preview
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleViewReport(report.id)
+                              }}
+                              className="text-blue-600 hover:text-blue-900 font-medium"
+                            >
+                              View PDF
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

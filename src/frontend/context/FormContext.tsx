@@ -202,6 +202,10 @@ export const FormProvider: React.FC<FormProviderProps> = ({ children }) => {
     dispatch({ type: 'RESET' })
   }, [])
 
+  const loadData = useCallback((data: Partial<PCRFormData>) => {
+    dispatch({ type: 'LOAD_DATA', payload: data })
+  }, [])
+
   const contextValue: FormContextType = {
     data: state.data,
     updateField,
@@ -211,6 +215,7 @@ export const FormProvider: React.FC<FormProviderProps> = ({ children }) => {
     isValid: state.isValid,
     reset,
     validateField,
+    loadData,
   }
 
   return (

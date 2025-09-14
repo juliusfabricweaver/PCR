@@ -1,5 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'
-import { Canvas, FabricImage, PencilBrush, util } from 'fabric'
+import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { Palette, Eraser, RotateCcw, Download, Upload, Trash2 } from 'lucide-react'
 import { Button, Tooltip } from '@/components/ui'
 import { cn } from '@/utils'
@@ -19,13 +18,21 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
   height = 400,
   className,
 }) => {
-  const fabricCanvasRef = useRef<Canvas | null>(null)
-  const backgroundImageRef = useRef<FabricImage | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const contextRef = useRef<CanvasRenderingContext2D | null>(null)
+  const backgroundImageRef = useRef<HTMLImageElement | null>(null)
   const [brushColor, setBrushColor] = useState('#DC2626')
   const [brushSize, setBrushSize] = useState(3)
   const [drawingMode, setDrawingMode] = useState<'pen' | 'eraser'>('pen')
+  const [isDrawing, setIsDrawing] = useState(false)
   const [isImageLoaded, setIsImageLoaded] = useState(false)
-  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [strokes, setStrokes] = useState<Array<{
+    color: string
+    size: number
+    points: Array<{ x: number, y: number }>
+  }>>([])
+  const currentStrokeRef = useRef<Array<{ x: number, y: number }>>([])
+  const lastPointRef = useRef<{ x: number, y: number } | null>(null)
 
   const colors = [
     { name: 'Red', value: '#DC2626', description: 'Injury/wound' },
@@ -35,157 +42,187 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
     { name: 'Black', value: '#1F2937', description: 'General marking' },
   ]
 
-  useEffect(() => {
-    const canvasElement = document.getElementById('injury-canvas') as HTMLCanvasElement
-    if (!canvasElement || fabricCanvasRef.current) return
+  const redrawCanvas = useCallback(() => {
+    if (!canvasRef.current || !contextRef.current) return
 
-    const canvas = new Canvas(canvasElement, {
-      width,
-      height,
-      backgroundColor: '#f9fafb',
-      isDrawingMode: true,
-      preserveObjectStacking: true,
-    })
+    const ctx = contextRef.current
 
-    const brush = new PencilBrush(canvas)
-    brush.color = brushColor
-    brush.width = brushSize
-    canvas.freeDrawingBrush = brush
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height)
 
-    const saveCanvasData = () => {
-      if (!fabricCanvasRef.current) return
-      
-      // Only save drawing objects, exclude background image
-      const allObjects = fabricCanvasRef.current.getObjects()
-      const drawingObjects = allObjects.filter(obj => obj !== backgroundImageRef.current)
-      
-      const canvasData = {
-        version: '5.3.0',
-        objects: drawingObjects.map(obj => obj.toObject(['selectable', 'evented']))
-      }
-      
-      // Get the canvas as a data URL for PDF generation
-      const imageDataUrl = fabricCanvasRef.current.toDataURL({
-        format: 'png',
-        quality: 1,
-        multiplier: 2 // Higher resolution for PDF
-      })
-      
-      // Store both JSON data (for editing) and image data (for PDF)
-      const combinedData = {
-        fabricData: canvasData,
-        imageData: imageDataUrl
-      }
-      
-      const dataString = JSON.stringify(combinedData)
-      setIsInitialLoad(false) // Mark that we've saved once
-      onChange(dataString)
+    // Fill background
+    ctx.fillStyle = '#f9fafb'
+    ctx.fillRect(0, 0, width, height)
+
+    // Draw background image if loaded
+    if (backgroundImageRef.current) {
+      const img = backgroundImageRef.current
+      const scale = Math.min(width / img.naturalWidth, height / img.naturalHeight)
+      const x = (width - img.naturalWidth * scale) / 2
+      const y = (height - img.naturalHeight * scale) / 2
+      ctx.drawImage(img, x, y, img.naturalWidth * scale, img.naturalHeight * scale)
     }
 
-    canvas.on('path:created', saveCanvasData)
-    canvas.on('object:modified', saveCanvasData)  
-    canvas.on('object:removed', saveCanvasData)
+    // Draw all strokes
+    strokes.forEach(stroke => {
+      if (stroke.points.length < 2) return
 
-    fabricCanvasRef.current = canvas
+      ctx.strokeStyle = stroke.color
+      ctx.lineWidth = stroke.size
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
 
-    // Load body image first, then load canvas data
-    FabricImage.fromURL('/images/front_image.jpg').then((img) => {
-      if (img && fabricCanvasRef.current) {
-        const scale = Math.min(width / img.width, height / img.height)
-        img.set({
-          selectable: false,
-          evented: false,
-          scaleX: scale,
-          scaleY: scale,
-          left: (width - img.width * scale) / 2,
-          top: (height - img.height * scale) / 2,
-        })
-        
-        // Add image to canvas as background layer
-        backgroundImageRef.current = img
-        fabricCanvasRef.current.add(img)
-        fabricCanvasRef.current.sendObjectToBack(img)
-        setIsImageLoaded(true)
-        
-        // Data will be loaded by the useEffect when value changes
-        fabricCanvasRef.current.renderAll()
-        
-      } else {
+      ctx.beginPath()
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y)
+
+      for (let i = 1; i < stroke.points.length; i++) {
+        ctx.lineTo(stroke.points[i].x, stroke.points[i].y)
       }
-    }).catch((error) => {
-      // Set fallback background if image fails
-      if (fabricCanvasRef.current) {
-        fabricCanvasRef.current.set('backgroundColor', '#f0f0f0')
-        
-        // Load existing canvas data even if image fails
-        if (value) {
-          try {
-            const parsedValue = JSON.parse(value)
-            const fabricData = parsedValue.fabricData || parsedValue // Backward compatibility
-            fabricCanvasRef.current.loadFromJSON(fabricData, () => {
-              fabricCanvasRef.current?.renderAll()
-            })
-          } catch (error) {
-            fabricCanvasRef.current?.renderAll()
-          }
-        } else {
-          fabricCanvasRef.current.renderAll()
-        }
-      }
+
+      ctx.stroke()
     })
+  }, [strokes, width, height])
 
-    return () => {
-      if (fabricCanvasRef.current) {
-        fabricCanvasRef.current.dispose()
-        fabricCanvasRef.current = null
+  const saveCanvasData = useCallback(() => {
+    if (!canvasRef.current) return
+
+    const imageDataUrl = canvasRef.current.toDataURL('image/png', 1.0)
+
+    const canvasData = {
+      strokes,
+      imageData: imageDataUrl
+    }
+
+    onChange(JSON.stringify(canvasData))
+  }, [strokes, onChange])
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    contextRef.current = ctx
+
+    // Set canvas size
+    canvas.width = width
+    canvas.height = height
+
+    // Load background image
+    const img = new Image()
+    img.onload = () => {
+      backgroundImageRef.current = img
+      setIsImageLoaded(true)
+      redrawCanvas()
+    }
+    img.onerror = () => {
+      console.error('Failed to load background image')
+      setIsImageLoaded(true)
+      redrawCanvas()
+    }
+    img.src = '/images/front_image.jpg'
+
+  }, [width, height, redrawCanvas])
+
+  // Load canvas data when value changes
+  useEffect(() => {
+    if (isImageLoaded && value && value.trim()) {
+      try {
+        const parsedValue = JSON.parse(value)
+
+        // Handle both new format and backward compatibility
+        if (parsedValue.strokes && Array.isArray(parsedValue.strokes)) {
+          setStrokes(parsedValue.strokes)
+        } else if (parsedValue.fabricData && parsedValue.fabricData.objects) {
+          // Convert old Fabric.js format to new format (basic conversion)
+          setStrokes([])
+        }
+      } catch (error) {
+        console.error('Failed to load canvas data:', error)
+        setStrokes([])
       }
+    }
+  }, [value, isImageLoaded])
+
+  // Only redraw when loading new data, not during active drawing
+  useEffect(() => {
+    if (!isDrawing) {
+      redrawCanvas()
+    }
+  }, [strokes, redrawCanvas, isDrawing])
+
+  // Save canvas data when strokes change (but not during active drawing)
+  useEffect(() => {
+    if (strokes.length > 0 && !isDrawing) {
+      saveCanvasData()
+    }
+  }, [strokes, saveCanvasData, isDrawing])
+
+  const getMousePos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+
+    const rect = canvas.getBoundingClientRect()
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
     }
   }, [])
 
-  // Load canvas data when value changes - but only on initial load, not after user interaction
-  useEffect(() => {
-    
-    // Only load if this is the initial load AND background image is loaded
-    if (isInitialLoad && isImageLoaded && fabricCanvasRef.current && backgroundImageRef.current && value && value.trim()) {
-      try {
-        const parsedValue = JSON.parse(value)
-        const fabricData = parsedValue.fabricData || parsedValue // Backward compatibility
-        
-        // Load only drawing objects - use the standard Fabric.js way
-        if (fabricData.objects && fabricData.objects.length > 0) {
-          
-          // Save background image temporarily
-          const tempBgImage = backgroundImageRef.current
-          
-          // Use loadFromJSON (it will clear canvas but that's fine, we'll re-add bg)
-          fabricCanvasRef.current.loadFromJSON(fabricData, () => {
-            
-            // Re-add background image
-            if (tempBgImage && fabricCanvasRef.current) {
-              fabricCanvasRef.current.add(tempBgImage)
-              fabricCanvasRef.current.sendObjectToBack(tempBgImage)
-              backgroundImageRef.current = tempBgImage
-            }
-            
-            fabricCanvasRef.current?.renderAll()
-          })
-        }
-      } catch (error) {
-      }
+  const startDrawing = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!contextRef.current) return
+
+    const pos = getMousePos(e)
+    lastPointRef.current = pos
+    currentStrokeRef.current = [pos]
+    setIsDrawing(true)
+
+    // Set up drawing context
+    const ctx = contextRef.current
+    const currentColor = drawingMode === 'eraser' ? '#f9fafb' : brushColor
+    const currentSize = drawingMode === 'eraser' ? brushSize * 2 : brushSize
+
+    ctx.strokeStyle = currentColor
+    ctx.lineWidth = currentSize
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.beginPath()
+    ctx.moveTo(pos.x, pos.y)
+  }, [getMousePos, brushColor, brushSize, drawingMode])
+
+  const draw = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || !lastPointRef.current || !contextRef.current) return
+
+    const pos = getMousePos(e)
+    const ctx = contextRef.current
+
+    // Draw line to current position
+    ctx.lineTo(pos.x, pos.y)
+    ctx.stroke()
+
+    // Add point to current stroke
+    currentStrokeRef.current.push(pos)
+    lastPointRef.current = pos
+  }, [isDrawing, getMousePos])
+
+  const stopDrawing = useCallback(() => {
+    if (isDrawing && currentStrokeRef.current.length > 1) {
+      const currentColor = drawingMode === 'eraser' ? '#f9fafb' : brushColor
+      const currentSize = drawingMode === 'eraser' ? brushSize * 2 : brushSize
+
+      // Save the completed stroke
+      setStrokes(prev => [...prev, {
+        color: currentColor,
+        size: currentSize,
+        points: [...currentStrokeRef.current]
+      }])
     }
-  }, [value, isInitialLoad, isImageLoaded])
 
-
-  useEffect(() => {
-    if (fabricCanvasRef.current?.freeDrawingBrush) {
-      fabricCanvasRef.current.freeDrawingBrush.color = brushColor
-      fabricCanvasRef.current.freeDrawingBrush.width = brushSize
-      fabricCanvasRef.current.isDrawingMode = drawingMode === 'pen'
-      fabricCanvasRef.current.renderAll()
-    }
-  }, [brushColor, brushSize, drawingMode])
-
-  // Remove the interval - it's causing issues
+    setIsDrawing(false)
+    lastPointRef.current = null
+    currentStrokeRef.current = []
+  }, [isDrawing, brushColor, brushSize, drawingMode])
 
   const handleColorChange = (color: string) => {
     setBrushColor(color)
@@ -193,15 +230,15 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
   }
 
   const handleClearCanvas = () => {
-    fabricCanvasRef.current?.clear()
+    setStrokes([])
     onChange('')
   }
 
   const handleDownload = () => {
-    if (!fabricCanvasRef.current) return
+    if (!canvasRef.current) return
     const link = document.createElement('a')
     link.download = 'injury-diagram.png'
-    link.href = fabricCanvasRef.current.toDataURL()
+    link.href = canvasRef.current.toDataURL()
     link.click()
   }
 
@@ -280,10 +317,14 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
       {/* Canvas */}
       <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
         <canvas
-          id="injury-canvas"
+          ref={canvasRef}
           width={width}
           height={height}
-          className="block"
+          className="block cursor-crosshair"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
         />
       </div>
     </div>
