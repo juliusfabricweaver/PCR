@@ -11,6 +11,7 @@ import logsRoutes from './routes/logs';
 
 // Import database to initialize
 import './database';
+import { cleanupService } from './services/cleanup';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -92,6 +93,22 @@ app.listen(PORT, () => {
   console.log(`🚀 PCR API Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+
+  // Start cleanup service
+  cleanupService.start();
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n🛑 Shutting down server...');
+  cleanupService.stop();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n🛑 Shutting down server...');
+  cleanupService.stop();
+  process.exit(0);
 });
 
 export default app;

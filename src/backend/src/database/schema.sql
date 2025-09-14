@@ -29,15 +29,15 @@ CREATE TABLE IF NOT EXISTS pcr_reports (
 -- Activity logs table
 CREATE TABLE IF NOT EXISTS activity_logs (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    action TEXT NOT NULL, -- 'login', 'logout', 'create_pcr', 'update_pcr', 'submit_pcr', etc.
+    user_id TEXT NOT NULL, -- Can be 'system' for automated tasks
+    action TEXT NOT NULL, -- 'login', 'logout', 'create_pcr', 'update_pcr', 'submit_pcr', 'cleanup_pcr_reports', etc.
     resource_type TEXT, -- 'pcr_report', 'user', etc.
     resource_id TEXT, -- ID of the resource being acted upon
     details TEXT, -- JSON blob with additional details
     ip_address TEXT,
     user_agent TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    -- Note: Removed FOREIGN KEY constraint to allow 'system' as user_id
 );
 
 -- Create indexes for better performance

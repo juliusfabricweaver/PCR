@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import db from '../database';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { logActivity } from '../middleware/logger';
+import { cleanupService } from '../services/cleanup';
 
 const router = Router();
 
@@ -215,6 +216,56 @@ router.post('/submit', authenticateToken, logActivity('submit_pcr', 'pcr_report'
 
   } catch (error) {
     console.error('Submit PCR error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Admin endpoints for cleanup management
+// GET /api/pcr/cleanup/preview - Preview what will be cleaned up
+router.get('/cleanup/preview', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Check if user is admin
+    if (req.user!.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    const preview = cleanupService.getCleanupPreview();
+
+    res.json({
+      success: true,
+      data: {
+        reportsToDelete: preview.count,
+        oldestReportDate: preview.oldestDate,
+        retentionPeriod: '24 hours'
+      }
+    });
+
+  } catch (error) {
+    console.error('Get cleanup preview error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// POST /api/pcr/cleanup/run - Manually trigger cleanup
+router.post('/cleanup/run', authenticateToken, logActivity('manual_cleanup', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Check if user is admin
+    if (req.user!.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    const result = cleanupService.manualCleanup();
+
+    res.json({
+      success: true,
+      data: {
+        deletedCount: result.deletedCount,
+        message: `Successfully deleted ${result.deletedCount} PCR report(s) older than 24 hours`
+      }
+    });
+
+  } catch (error) {
+    console.error('Manual cleanup error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
