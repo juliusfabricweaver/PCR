@@ -139,7 +139,7 @@ The PCR form is based on `form_inputs.md` specification with:
 
 To start the backend server correctly:
 ```bash
-nvm use 18 && npx ts-node --transpile-only src/backend/src/index.ts
+npx ts-node --transpile-only src/backend/src/index.ts
 ```
 
 Or use the npm script (which handles Node version automatically):
