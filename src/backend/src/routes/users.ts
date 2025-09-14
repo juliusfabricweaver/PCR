@@ -11,6 +11,87 @@ function generateId(): string {
   return 'user_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 }
 
+// POST /api/users - Create new user (admin only)
+router.post('/', authenticateToken, requireRole(['admin']), logActivity('create_user', 'user'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { username, password, email, firstName, lastName, role = 'user' } = req.body;
+
+    // Validate required fields
+    if (!username || !password || !email || !firstName || !lastName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username, password, email, first name, and last name are required'
+      });
+    }
+
+    // Check if username already exists
+    const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username already exists'
+      });
+    }
+
+    // Check if email already exists
+    const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (existingEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists'
+      });
+    }
+
+    // Validate role
+    if (!['admin', 'user'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be admin or user'
+      });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Generate user ID
+    const userId = generateId();
+
+    // Insert new user
+    db.prepare(`
+      INSERT INTO users (id, username, password_hash, email, first_name, last_name, role, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `).run(userId, username, passwordHash, email, firstName, lastName, role);
+
+    // Get created user
+    const newUser = db.prepare(`
+      SELECT id, username, email, first_name, last_name, role, is_active, created_at
+      FROM users WHERE id = ?
+    `).get(userId);
+
+    const userData = {
+      id: newUser.id,
+      username: newUser.username,
+      email: newUser.email,
+      firstName: newUser.first_name,
+      lastName: newUser.last_name,
+      role: newUser.role,
+      isActive: newUser.is_active,
+      createdAt: newUser.created_at,
+      lastLogin: null
+    };
+
+    res.status(201).json({
+      success: true,
+      data: userData,
+      message: 'User created successfully'
+    });
+
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 // GET /api/users - Get all users (admin only)
 router.get('/', authenticateToken, requireRole(['admin']), (req: AuthenticatedRequest, res: Response) => {
   try {

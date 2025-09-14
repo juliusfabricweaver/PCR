@@ -16,6 +16,10 @@ interface SidebarProps {
   currentPath?: string
   onNavigate?: (href: string) => void
   onClose?: () => void
+  user?: {
+    name: string
+    role: string
+  }
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -23,6 +27,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   currentPath = '/',
   onNavigate,
   onClose,
+  user,
 }) => {
   const navigationItems: SidebarItem[] = [
     {
@@ -147,16 +152,18 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* Admin section */}
-            <div className="mt-8">
-              <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                Administration
-              </h3>
-              <div className="mt-2 space-y-1">
-                {adminItems.map(item => (
-                  <SidebarItemComponent key={item.id} item={item} />
-                ))}
+            {user?.role === 'admin' && (
+              <div className="mt-8">
+                <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                  Administration
+                </h3>
+                <div className="mt-2 space-y-1">
+                  {adminItems.map(item => (
+                    <SidebarItemComponent key={item.id} item={item} />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </nav>
 
           {/* Footer */}

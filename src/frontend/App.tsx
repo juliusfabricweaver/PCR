@@ -7,6 +7,7 @@ import { AuthProvider, NotificationProvider, FormProvider, useAuth } from '@/con
 import { useTimeout } from '@/hooks'
 import DashboardPage from './pages/DashboardPage'
 import ReportsPage from './pages/ReportsPage'
+import UserManagementPage from './pages/UserManagementPage'
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -151,14 +152,7 @@ const AppContent: React.FC = () => {
         {/* Admin Routes */}
         <Route
           path="/admin/users"
-          element={
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                User Management
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">User management coming soon...</p>
-            </div>
-          }
+          element={<UserManagementPage />}
         />
 
         <Route

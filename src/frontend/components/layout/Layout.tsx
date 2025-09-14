@@ -46,6 +46,7 @@ const Layout: React.FC<LayoutProps> = ({
           currentPath={currentPath}
           onNavigate={onNavigate}
           onClose={closeSidebar}
+          user={user}
         />
 
         {/* Main content area */}
