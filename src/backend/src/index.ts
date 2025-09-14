@@ -7,6 +7,7 @@ import path from 'path';
 import authRoutes from './routes/auth';
 import pcrRoutes from './routes/pcr';
 import userRoutes from './routes/users';
+import logsRoutes from './routes/logs';
 
 // Import database to initialize
 import './database';
@@ -41,6 +42,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/pcr', pcrRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/logs', logsRoutes);
 
 // Special route for submissions to match frontend expectation
 app.post('/api/submissions', (req, res, next) => {

@@ -13,8 +13,13 @@ function generateId(): string {
   return 'user_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 }
 
+// Generate simple ID for activity logs
+function generateLogId(): string {
+  return 'log_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
 // POST /api/auth/login
-router.post('/login', logActivity('login'), async (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
 
@@ -38,6 +43,29 @@ router.post('/login', logActivity('login'), async (req: Request, res: Response) 
 
     // Update last login
     db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+
+    // Log successful login activity
+    try {
+      db.prepare(`
+        INSERT INTO activity_logs (id, user_id, action, resource_type, resource_id, details, ip_address, user_agent)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        generateLogId(),
+        user.id,
+        'login',
+        null,
+        null,
+        JSON.stringify({
+          method: req.method,
+          url: req.url,
+          statusCode: 200
+        }),
+        req.ip,
+        req.headers['user-agent'] || null
+      );
+    } catch (logError) {
+      console.error('Failed to log login activity:', logError);
+    }
 
     // Create JWT token
     const token = jwt.sign(

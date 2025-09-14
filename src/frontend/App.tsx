@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { Layout } from '@/components/layout'
 import { Loading } from '@/components/ui'
-import { LoginPage, PCRPage } from '@/pages'
+import { LoginPage, PCRPage, ActivityLogsPage } from '@/pages'
 import { AuthProvider, NotificationProvider, FormProvider, useAuth } from '@/context'
 import { useTimeout } from '@/hooks'
 import DashboardPage from './pages/DashboardPage'
@@ -136,17 +136,10 @@ const AppContent: React.FC = () => {
           element={<ReportsPage />}
         />
 
-        {/* Logs - Placeholder */}
+        {/* Activity Logs */}
         <Route
           path="/logs"
-          element={
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                Activity Logs
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">Activity logs coming soon...</p>
-            </div>
-          }
+          element={<ActivityLogsPage />}
         />
 
         {/* Admin Routes */}

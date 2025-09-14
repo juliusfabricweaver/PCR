@@ -128,6 +128,21 @@ export interface PaginatedResponse<T> {
   totalPages: number
 }
 
+export interface ActivityLog {
+  id: string
+  user_id: string
+  username?: string
+  first_name?: string
+  last_name?: string
+  action: string
+  resource_type?: string
+  resource_id?: string
+  details?: string
+  ip_address?: string
+  user_agent?: string
+  created_at: string
+}
+
 // Form validation types
 export interface ValidationError {
   field: string

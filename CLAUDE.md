@@ -134,6 +134,93 @@ The PCR form is based on `form_inputs.md` specification with:
 - Hot reloading enabled for both frontend and backend during development
 - Tests use Jest for unit testing and Playwright for E2E testing
 
+### Starting the Server
+**IMPORTANT**: The backend requires Node.js 18 due to better-sqlite3 compatibility.
+
+To start the backend server correctly:
+```bash
+nvm use 18 && npx ts-node --transpile-only src/backend/src/index.ts
+```
+
+Or use the npm script (which handles Node version automatically):
+```bash
+npm run backend:dev
+```
+
+### Adding Frontend Features
+
+#### Key Patterns to Follow:
+
+1. **Authentication Integration**
+   - Always use `useAuth()` hook from `@/context/AuthContext`
+   - Check `isAuthenticated` and `token` before API calls
+   - Example:
+   ```typescript
+   const { token, isAuthenticated, user } = useAuth()
+
+   if (!isAuthenticated || !token) {
+     setError('Please log in to access this feature')
+     return
+   }
+   ```
+
+2. **API Calls**
+   - Always include Authorization header: `Bearer ${token}`
+   - Handle errors properly with user-friendly messages
+   - Example:
+   ```typescript
+   const response = await fetch('/api/endpoint', {
+     headers: {
+       'Authorization': `Bearer ${token}`,
+       'Content-Type': 'application/json',
+     },
+   })
+   ```
+
+3. **Role-Based Access**
+   - For admin-only features, check `user?.role === 'admin'`
+   - Hide navigation items conditionally based on role
+   - Backend routes are protected with `requireRole(['admin'])` middleware
+
+4. **UI Components**
+   - Use existing components from `@/components/ui` and `@/components/forms`
+   - Follow existing patterns: Button, Modal, Input, Select, Alert, Loading
+   - Maintain consistent styling with existing pages
+
+5. **Form Handling**
+   - Use controlled components with useState for form data
+   - Implement proper validation with error display
+   - Show loading states during API operations
+   - Example pattern:
+   ```typescript
+   const [formData, setFormData] = useState({ field1: '', field2: '' })
+   const [errors, setErrors] = useState({})
+   const [loading, setLoading] = useState(false)
+   ```
+
+6. **Table Layouts**
+   - Use `overflow-x-auto` for horizontal scrolling
+   - Add minimum widths to columns: `min-w-[200px]`
+   - Use flex layouts for action buttons: `flex items-center justify-end gap-2`
+
+7. **Navigation Updates**
+   - Add new routes to `src/frontend/App.tsx`
+   - Update `src/frontend/components/layout/Sidebar.tsx` for menu items
+   - Pass user role to Sidebar for conditional rendering
+
+#### File Structure for New Features:
+- Page components: `src/frontend/pages/FeaturePage.tsx`
+- Add route in: `src/frontend/App.tsx`
+- Backend API: `src/backend/src/routes/feature.ts`
+- Types: `src/shared/types/index.ts`
+
+#### Common Issues to Avoid:
+- Never use direct localStorage access for tokens (use useAuth hook)
+- Don't forget to handle loading and error states
+- Remember to refresh data after create/update operations
+- Always validate user permissions before showing admin features
+- Use proper TypeScript interfaces for form data and API responses
+
 ### Security Features
 - Password hashing with bcrypt
 - JWT token-based authentication

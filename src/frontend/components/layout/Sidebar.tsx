@@ -51,6 +51,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       href: '/pcr',
       isActive: currentPath.startsWith('/pcr') && currentPath !== '/pcr/new',
     },
+  ]
+
+  const adminItems: SidebarItem[] = [
     {
       id: 'logs',
       label: 'Activity Logs',
@@ -58,9 +61,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       href: '/logs',
       isActive: currentPath === '/logs',
     },
-  ]
-
-  const adminItems: SidebarItem[] = [
     {
       id: 'users',
       label: 'User Management',
