@@ -31,6 +31,12 @@ app.use(express.urlencoded({ extended: true }));
 // Trust proxy for accurate IP addresses
 app.set('trust proxy', true);
 
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url} - Headers: ${JSON.stringify(req.headers, null, 2)}`);
+  next();
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/pcr', pcrRoutes);
