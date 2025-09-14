@@ -123,7 +123,7 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
     }
     img.src = '/images/front_image.jpg'
 
-  }, [width, height, redrawCanvas])
+  }, [width, height])
 
   // Load canvas data when value changes
   useEffect(() => {
@@ -150,14 +150,14 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
     if (!isDrawing) {
       redrawCanvas()
     }
-  }, [strokes, redrawCanvas, isDrawing])
+  }, [strokes, isDrawing])
 
   // Save canvas data when strokes change (but not during active drawing)
   useEffect(() => {
     if (strokes.length > 0 && !isDrawing) {
       saveCanvasData()
     }
-  }, [strokes, saveCanvasData, isDrawing])
+  }, [strokes, isDrawing])
 
   const getMousePos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
