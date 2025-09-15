@@ -52,7 +52,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
 
   const saturationOptions = [
     { value: 'copd', label: 'COPD (88-92%)' },
-    { value: 'other', label: 'Other (94-98%)' },
+    { value: 'other', label: 'Other (95-100%)' },
   ]
 
   const deliveryDeviceOptions = [
@@ -100,7 +100,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
             value={data.spo2 || ''}
             onChange={(e) => handleFieldChange('spo2', e.target.value)}
             error={errors.spo2}
-            placeholder="98"
+            placeholder="Enter value (0-100)"
           />
         </div>
         
@@ -131,12 +131,24 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
           onChange={(value) => handleFieldChange('oxygen_given', value as 'yes' | 'no')}
           error={errors.oxygen_given}
         />
+        
+        {data.oxygen_given === 'yes' && (
+          <FormSection title="Reason for Oxygen Therapy">
+            <Input
+              label="Reason for O2 Therapy"
+              value={data.reasonForO2Therapy || []}
+              onChange={(e) => handleFieldChange('reasonForO2Therapy', e.target.value)}
+              error={errors.reasonForO2Therapy}
+              placeholder="e.g., hypoxaemia, shock, anaphylaxis, drowning, ventilation during CPR..."
+            />
+          </FormSection>
+        )}
 
         {data.oxygen_given === 'yes' && (
           <Card>
             <Card.Body>
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                <h4 className="font-medium text-gray-500 dark:text-gray-500">
                   Therapy Details
                 </h4>
 
@@ -166,7 +178,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                     value={data.flowRate || ''}
                     onChange={(e) => handleFieldChange('flowRate', e.target.value)}
                     error={errors.flowRate}
-                    placeholder="2"
+                    placeholder="Enter value"
                   />
 
                   <RadioGroup
@@ -186,58 +198,6 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
 
       {data.oxygen_given === 'yes' && (
         <>
-          <FormSection title="Responders on Call">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Supervisor"
-                value={data.o2_supervisor || ''}
-                onChange={(e) => handleFieldChange('o2_supervisor', e.target.value)}
-                error={errors.o2_supervisor}
-              />
-              
-              <Input
-                label="Responder 1"
-                value={data.o2_responder1 || ''}
-                onChange={(e) => handleFieldChange('o2_responder1', e.target.value)}
-                error={errors.o2_responder1}
-              />
-              
-              <Input
-                label="Responder 2"
-                value={data.o2_responder2 || ''}
-                onChange={(e) => handleFieldChange('o2_responder2', e.target.value)}
-                error={errors.o2_responder2}
-              />
-              
-              <Input
-                label="Responder 3"
-                value={data.o2_responder3 || ''}
-                onChange={(e) => handleFieldChange('o2_responder3', e.target.value)}
-                error={errors.o2_responder3}
-              />
-            </div>
-          </FormSection>
-
-          <FormSection title="Reason for Oxygen Therapy">
-            <Checkbox
-              name="reasonForO2Therapy"
-              label="Reason for O2 Therapy"
-              options={reasonOptions.map(reason => ({ value: reason, label: reason }))}
-              value={data.reasonForO2Therapy || []}
-              onChange={(value) => handleReasonChange(value)}
-            />
-            
-            {data.reasonForO2Therapy?.includes('Other') && (
-              <Input
-                label="Other Reason (specify)"
-                value={data.reasonForO2TherapyOther || ''}
-                onChange={(e) => handleFieldChange('reasonForO2TherapyOther', e.target.value)}
-                error={errors.reasonForO2TherapyOther}
-                placeholder="Describe the other reason..."
-              />
-            )}
-          </FormSection>
-
           <FormSection title="Flow Rate Alterations">
             <div className="space-y-4">
               <div className="flex items-center justify-between">

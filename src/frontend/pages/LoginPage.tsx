@@ -59,53 +59,28 @@ const LoginPage: React.FC = () => {
 
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
         {/* Left side - Branding and features */}
-        <div className="hidden lg:block space-y-8">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-medical-600 rounded-xl flex items-center justify-center">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">PCR System</h1>
-                <p className="text-gray-600 dark:text-gray-400">Patient Care Report Management</p>
-              </div>
-            </div>
-
-            <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
-              Comprehensive healthcare documentation system designed for emergency responders and
-              medical professionals.
-            </p>
+        <div className="hidden lg:grid grid-cols-[200px,1fr] gap-8 items-center">
+          {/* Logo column (far left) */}
+          <div className="flex justify-start">
+            <img
+              src="/images/vcrt_logo.png"
+              alt="PCR System"
+              className="h-48 xl:h-56 w-auto object-contain drop-shadow-sm"
+            />
           </div>
 
-          {/* Features */}
-          <div className="space-y-6">
-            <div className="flex items-start space-x-4">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0">
-                <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  Comprehensive Documentation
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  Detailed forms, vital signs tracking, and injury documentation
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-4">
-              <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  Team Collaboration
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  Multi-user support with role-based access and audit trails
-                </p>
-              </div>
-            </div>
+          {/* Text column (aligned with the logo) */}
+          <div className="flex flex-col justify-center space-y-3">
+            <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight">
+              PCR
+            </h1>
+            <p className="text-2xl lg:text-3xl font-semibold text-gray-800 dark:text-gray-200">
+              Patient Care Report
+            </p>
+            <p className="text-sm md:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+              Comprehensive documentation system designed for the Volunteer Crisis
+              Response Team (VCRT) at the University of Ottawa.
+            </p>
           </div>
         </div>
 
@@ -163,8 +138,7 @@ const LoginPage: React.FC = () => {
             <Card.Footer>
               <div className="space-y-4">
                 <div className="text-center text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                  <p>© 2025 PCR Healthcare System</p>
-                  <p>Secure • Compliant • Professional</p>
+                  <p>© 2025 PCR System</p>
                 </div>
               </div>
             </Card.Footer>

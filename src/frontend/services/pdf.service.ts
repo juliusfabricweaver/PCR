@@ -33,6 +33,42 @@ interface PDFGenerationResult {
   size: number
 }
 
+// Helper: render a row of fields with column spans
+function renderFieldsRow(
+  pdf: jsPDF,
+  fields: { label: string; value: string }[],
+  spans: number[],
+  yPosition: number,
+  options: Required<PDFOptions>,
+  contentWidth: number
+): number {
+  const colUnit = contentWidth / 4
+  let x = options.margins.left
+
+  fields.forEach((field, i) => {
+    const span = spans[i] || 1
+    const maxWidth = colUnit * span
+
+    // Bold label
+    pdf.setFont('helvetica', 'bold')
+    pdf.text(field.label, x, yPosition)
+
+    // Normal font for value
+    const labelWidth = pdf.getTextWidth(field.label + ' ')
+    pdf.setFont('helvetica', 'normal')
+    pdf.text(
+      (field.value || '').toString().substring(0, 50),
+      x + labelWidth,
+      yPosition,
+      { maxWidth: maxWidth - labelWidth }
+    )
+
+    x += maxWidth
+  })
+
+  return yPosition + 4
+}
+
 export class PDFService {
   private defaultOptions: Required<PDFOptions> = {
     includeImages: true,
@@ -144,9 +180,6 @@ export class PDFService {
             <button id="print-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
               Print
             </button>
-            <button id="download-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-              Download PDF
-            </button>
             <button id="close-btn" class="px-2 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400">
               ✕
             </button>
@@ -166,15 +199,10 @@ export class PDFService {
 
     // Event handlers
     const printBtn = modal.querySelector('#print-btn')
-    const downloadBtn = modal.querySelector('#download-btn')
     const closeBtn = modal.querySelector('#close-btn')
 
     printBtn?.addEventListener('click', () => {
       this.printPDF(result.url)
-    })
-
-    downloadBtn?.addEventListener('click', () => {
-      this.downloadPDF(result.blob, result.filename)
     })
 
     const closeModal = () => {
@@ -200,32 +228,58 @@ export class PDFService {
   /**
    * Print PDF directly
    */
-  printPDF(url: string, options: PrintOptions = {}): void {
-    const iframe = document.createElement('iframe')
-    iframe.style.display = 'none'
-    iframe.src = url
-    
-    document.body.appendChild(iframe)
-    
-    iframe.onload = () => {
-      iframe.contentWindow?.print()
-      setTimeout(() => {
-        document.body.removeChild(iframe)
-      }, 1000)
-    }
-  }
+  	printPDF(url: string, options: PrintOptions = {}): void {
+		const iframe = document.createElement('iframe')
+		iframe.style.position = 'fixed'
+		iframe.style.right = '0'
+		iframe.style.bottom = '0'
+		iframe.style.width = '0'
+		iframe.style.height = '0'
+		iframe.style.border = '0'
+		iframe.src = url
 
-  /**
-   * Download PDF file
-   */
-  downloadPDF(blob: Blob, filename: string): void {
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+		document.body.appendChild(iframe)
+
+		iframe.onload = () => {
+			const win = iframe.contentWindow
+			if (!win) return
+
+			const cleanup = () => {
+				try {
+					// Remove listeners first
+					if ('onafterprint' in win) {
+						win.removeEventListener('afterprint', cleanup as any)
+					} else if (win.matchMedia) {
+						mql?.removeEventListener
+							? mql.removeEventListener('change', mqlListener)
+							: mql.removeListener(mqlListener)
+					}
+				} catch {}
+				// Then remove iframe
+				document.body.removeChild(iframe)
+			}
+
+			// Fallback for browsers without onafterprint on the iframe window
+			let mql: MediaQueryList | null = null
+			const mqlListener = (e: MediaQueryListEvent) => {
+				// when print dialog closes, matches goes from true -> false
+				if (!e.matches) cleanup()
+			}
+
+			// Prefer onafterprint
+			if ('onafterprint' in win) {
+				win.addEventListener('afterprint', cleanup as any)
+			} else if (win.matchMedia) {
+				mql = win.matchMedia('print')
+				if (mql.addEventListener) mql.addEventListener('change', mqlListener)
+				else mql.addListener(mqlListener)
+			}
+
+			// Ensure focus, then trigger print
+			try { win.focus() } catch {}
+			setTimeout(() => win.print(), 50)
+		}
+	}
 
   /**
    * Create "Confirm Printed" workflow
@@ -338,37 +392,94 @@ export class PDFService {
   ): number {
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
-    pdf.text('BASIC INFO', options.margins.left, yPosition)
-    yPosition += 5
+    const boxHeight = 8
+    const boxX = options.margins.left
+    const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
+    const boxY = yPosition
+    pdf.setFillColor(100, 100, 100)
+    pdf.rect(boxX, boxY, boxWidth, boxHeight, 'F')
+    pdf.setTextColor(255, 255, 255)
+    pdf.text('RESPONSE AND PATIENT INFORMATION', boxX + 2, boxY + boxHeight - 3)
+    pdf.setTextColor(0, 0, 0)
+    yPosition += boxHeight + 6
 
-    pdf.setFontSize(7)
+    pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
     
-    const basicFields = [
-      { label: 'Date:', value: data.date || '' },
-      { label: 'Location:', value: data.location || '' },
-      { label: 'Call#:', value: data.callNumber || '' },
-      { label: 'Report#:', value: data.reportNumber || '' },
-      { label: 'Supervisor:', value: data.supervisor || '' },
-      { label: 'PSM:', value: data.primaryPSM || '' },
-      { label: 'Notified:', value: data.timeNotified || '' },
-      { label: 'On Scene:', value: data.onScene || '' },
-      { label: 'Cleared:', value: data.clearedScene || '' },
-      { label: 'First Agency:', value: data.firstAgencyOnScene || '' },
-    ]
+    
+    // First set of basic info
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: 'Date:', value: data.date || '' },
+        { label: 'Location:', value: data.location || '' },
+        { label: 'Call #:', value: data.callNumber || '' },
+        { label: 'Report #:', value: data.reportNumber || '' },
+      ],
+      [1, 1, 1, 1], 
+      yPosition,
+      options,
+      contentWidth
+    )
+    
+    // Second set of basic info
+    const responders = [
+      data.responder1 || '',
+      data.responder2 || '',
+      data.responder3 || ''
+    ].filter(r => r.trim() !== '').join(', ')
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: 'Supervisor:', value: data.supervisor || '' },
+        { label: 'Primary PSM:', value: data.primaryPSM || '' },
+        { label: 'Responders:', value: responders },
+      ],
+      [1, 1, 2], 
+      yPosition,
+      options,
+      contentWidth
+    )
 
-    // Three columns layout for more compact display
-    const columnWidth = contentWidth / 3
-    for (let i = 0; i < basicFields.length; i++) {
-      const field = basicFields[i]
-      const x = options.margins.left + (i % 3) * columnWidth
-      if (i % 3 === 0 && i > 0) yPosition += 3
-      
-      const text = `${field.label} ${field.value}`
-      pdf.text(text.substring(0, 25), x, yPosition) // Limit text length
-    }
+    // Third set of basic info
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: 'Time Notified:', value: data.timeNotified || '' },
+        { label: 'On Scene:', value: data.onScene || '' },
+        { label: 'Transport Arrived:', value: data.transportArrived || '' },
+        { label: 'Cleared:', value: data.clearedScene || '' },
+      ],
+      [1, 1, 1, 1], 
+      yPosition,
+      options,
+      contentWidth
+    )
 
-    return yPosition + 8
+    // Fourth set of basic info
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: 'Paramedics Called by:', value: data.parademicsCalledBy || '' },
+        { label: 'First Agency on Scene:', value: data.firstAgencyOnScene || '' },
+      ],
+      [2, 2], 
+      yPosition,
+      options,
+      contentWidth
+    )
+
+    pdf.setDrawColor(0)
+    pdf.setLineWidth(0.4)
+    pdf.line(
+      options.margins.left,
+      yPosition,
+      pdf.internal.pageSize.getWidth() - options.margins.right,
+      yPosition
+    )
+
+    return yPosition + 4
+
   }
 
   /**
@@ -381,35 +492,54 @@ export class PDFService {
     yPosition: number,
     contentWidth: number
   ): number {
-    pdf.setFontSize(9)
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('PATIENT INFO', options.margins.left, yPosition)
-    yPosition += 4
-
-    pdf.setFontSize(7)
+    pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
+    yPosition += 2
     
-    const patientFields = [
-      { label: 'Name:', value: data.patientName || '' },
-      { label: 'DOB:', value: data.dob || '' },
-      { label: 'Age:', value: data.age ? data.age.toString() : '' },
-      { label: 'Sex:', value: data.sex || '' },
-      { label: 'Status:', value: data.status || '' },
-      { label: 'Emergency Contact:', value: data.emergencyContactName || '' },
-    ]
+    // First set of patient info
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: 'Patient Name:', value: data.patientName || '' },
+        { label: 'DOB:', value: data.dob || '' },
+        { label: 'Age:', value: data.age ? data.age.toString() : '' },
+        { label: 'Sex:', value: data.sex || '' },
+      ],
+      [1, 1, 1, 1], 
+      yPosition,
+      options,
+      contentWidth
+    )
 
-    // Three columns layout
-    const columnWidth = contentWidth / 3
-    for (let i = 0; i < patientFields.length; i++) {
-      const field = patientFields[i]
-      const x = options.margins.left + (i % 3) * columnWidth
-      if (i % 3 === 0 && i > 0) yPosition += 3
-      
-      const text = `${field.label} ${field.value}`
-      pdf.text(text.substring(0, 25), x, yPosition)
-    }
+    // Second set of patient info
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: 'Status:', value: data.status || '' },
+        { label: 'Student/Employee #:', value: data.studentEmployeeNumber || '' },
+        { label: 'Workplace Injury?:', value: data.workplaceInjury || '' },
+      ],
+      [1, 1, 1], 
+      yPosition,
+      options,
+      contentWidth
+    )
 
-    return yPosition + 6
+    // Third set of patient info
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: 'Emergency Contact Name (and Relationship):', value: data.emergencyContactName || '' },
+        { label: 'Conatacted?:', value: data.contacted || '' },
+      ],
+      [2, 2], 
+      yPosition,
+      options,
+      contentWidth
+    )
+
+    return yPosition + 4
+
   }
 
   /**
@@ -424,27 +554,41 @@ export class PDFService {
   ): number {
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
-    pdf.text('MEDICAL HISTORY', options.margins.left, yPosition)
-    yPosition += 4
+    const boxHeight = 8
+    const boxX = options.margins.left
+    const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
+    const boxY = yPosition
+    pdf.setFillColor(100, 100, 100)
+    pdf.rect(boxX, boxY, boxWidth, boxHeight, 'F')
+    pdf.setTextColor(255, 255, 255)
+    pdf.text('PATIENT MEDICAL HISTORY / REASON FOR RESPONSE', boxX + 2, boxY + boxHeight - 3)
+    pdf.setTextColor(0, 0, 0)
+    yPosition += boxHeight + 6
 
-    pdf.setFontSize(7)
+    pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
     
-    const medicalFields = [
-      { label: 'Chief Complaint:', value: data.chiefComplaint || '' },
-      { label: 'Signs/Symptoms:', value: data.signsSymptoms || '' },
-      { label: 'Allergies:', value: data.allergies || '' },
-      { label: 'Medications:', value: data.medications || '' },
-    ]
-
-    for (const field of medicalFields) {
-      if (field.value) {
-        // Compact single-line format
-        const truncatedValue = field.value.substring(0, 60) + (field.value.length > 60 ? '...' : '')
-        pdf.text(`${field.label} ${truncatedValue}`, options.margins.left, yPosition)
-        yPosition += 3
-      }
-    }
+    yPosition = renderFieldsRow(
+      pdf, [{ label: 'Chief Complaint:', value: data.chiefComplaint || '' }], [4], yPosition, options, contentWidth
+    )
+    yPosition = renderFieldsRow(
+      pdf, [{ label: 'Signs/Symptoms:', value: data.signsSymptoms || '' }], [4], yPosition, options, contentWidth
+    )
+    yPosition = renderFieldsRow(
+      pdf, [{ label: 'Allergies:', value: data.allergies || '' }], [4], yPosition, options, contentWidth
+    )
+    yPosition = renderFieldsRow(
+      pdf, [{ label: 'Medications:', value: data.medications || '' }], [4], yPosition, options, contentWidth
+    )
+    yPosition = renderFieldsRow(
+      pdf, [{ label: 'Pertinent Medical History:', value: data.medicalHistory || '' }], [4], yPosition, options, contentWidth
+    )
+    yPosition = renderFieldsRow(
+      pdf, [{ label: 'Last Meal:', value: data.lastMeal || '' }], [4], yPosition, options, contentWidth
+    )
+    yPosition = renderFieldsRow(
+      pdf, [{ label: 'Rapid Body Survey Findings:', value: data.bodySurvey || '' }], [4], yPosition, options, contentWidth
+    )
 
     return yPosition + 4
   }
@@ -776,5 +920,7 @@ export class PDFService {
     }
   }
 }
+
+
 
 export const pdfService = new PDFService()

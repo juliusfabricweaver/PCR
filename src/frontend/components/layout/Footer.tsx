@@ -16,7 +16,7 @@ const Footer: React.FC<FooterProps> = ({ className }) => {
       <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
         <div className="flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-6">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            © {currentYear} PCR Healthcare System. All rights reserved.
+            © {currentYear} PCR System. All rights reserved.
           </p>
           <div className="flex items-center space-x-4 text-xs text-gray-400 dark:text-gray-500">
             <button 

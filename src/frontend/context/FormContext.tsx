@@ -35,44 +35,59 @@ const initialState: FormState = {
 }
 
 // Validation rules for PCR form
-const validationSchema = {
-  // Required fields from form_inputs.md
-  date: [(value: string) => validationRules.required(value), 'Date is required'],
-  location: [(value: string) => validationRules.required(value), 'Location is required'],
-  callNumber: [(value: string) => validationRules.required(value), 'Call number is required'],
-  reportNumber: [(value: string) => validationRules.required(value), 'Report number is required'],
-  supervisor: [(value: string) => validationRules.required(value), 'Supervisor is required'],
-  timeNotified: [(value: string) => validationRules.required(value), 'Time notified is required'],
-  onScene: [(value: string) => validationRules.required(value), 'On scene time is required'],
-  clearedScene: [(value: string) => validationRules.required(value), 'Cleared scene time is required'],
-  firstAgencyOnScene: [(value: string) => validationRules.required(value), 'First agency on scene is required'],
-  patientName: [(value: string) => validationRules.required(value), 'Patient name is required'],
-  positionOfPatient: [(value: string) => validationRules.required(value), 'Position of patient is required'],
-  comments: [(value: string) => validationRules.required(value), 'Call description is required'],
-  transferComments: [(value: string) => validationRules.required(value), 'Transfer of care is required'],
-  patientCareTransferred: [(value: string) => validationRules.required(value), 'Patient care transferred is required'],
-  timeCareTransferred: [(value: string) => validationRules.required(value), 'Time care transferred is required'],
-  
-  // Email validation
-  emergencyContactEmail: [(value: string) => !value || value.includes('@'), 'Please enter a valid email'],
-  
-  // Time format validation
-  timeNotified: [(value: string) => !value || /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value), 'Please use HH:MM format'],
-  onScene: [(value: string) => !value || /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value), 'Please use HH:MM format'],
-  clearedScene: [(value: string) => !value || /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value), 'Please use HH:MM format'],
-  timeCareTransferred: [(value: string) => !value || /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value), 'Please use HH:MM format'],
-  
-  // Number validation
-  age: [(value: string) => !value || (Number(value) >= 0 && Number(value) <= 150), 'Please enter a valid age'],
-  scale: [(value: number) => !value || (value >= 1 && value <= 10), 'Scale must be between 1-10'],
+const HHMM = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/
 
-  // Age or DOB validation - at least one must be filled
-  ageOrDob: [(data: Partial<PCRFormData>) => {
-    const age = data.age;
-    const dob = data.dob;
-    return !!(age && age.trim()) || !!(dob && dob.trim());
-  }, 'Either age or date of birth must be provided'],
-} as Record<string, [(value: any) => boolean, string][]>
+const validationSchema: Record<string, [(value: any) => boolean, string][]> = {
+  // Required
+  date: [[(v: string) => validationRules.required(v), 'Date is required']],
+  location: [[(v: string) => validationRules.required(v), 'Location is required']],
+  callNumber: [[(v: string) => validationRules.required(v), 'Call number is required']],
+  reportNumber: [[(v: string) => validationRules.required(v), 'Report number is required']],
+  supervisor: [[(v: string) => validationRules.required(v), 'Supervisor is required']],
+  firstAgencyOnScene: [[(v: string) => validationRules.required(v), 'First agency on scene is required']],
+  patientName: [[(v: string) => validationRules.required(v), 'Patient name is required']],
+  positionOfPatient: [[(v: string) => validationRules.required(v), 'Position of patient is required']],
+  comments: [[(v: string) => validationRules.required(v), 'Call description is required']],
+  transferComments: [[(v: string) => validationRules.required(v), 'Transfer of care is required']],
+  patientCareTransferred: [[(v: string) => validationRules.required(v), 'Patient care transferred is required']],
+
+  // Time fields (required + format) — NO duplicate keys
+  timeNotified: [
+    [(v: string) => validationRules.required(v), 'Time notified is required'],
+    [(v: string) => HHMM.test(v), 'Please use HH:MM format'],
+  ],
+  onScene: [
+    [(v: string) => validationRules.required(v), 'On scene time is required'],
+    [(v: string) => HHMM.test(v), 'Please use HH:MM format'],
+  ],
+  clearedScene: [
+    [(v: string) => validationRules.required(v), 'Cleared scene time is required'],
+    [(v: string) => HHMM.test(v), 'Please use HH:MM format'],
+  ],
+  timeCareTransferred: [
+    [(v: string) => validationRules.required(v), 'Time care transferred is required'],
+    [(v: string) => HHMM.test(v), 'Please use HH:MM format'],
+  ],
+
+  // Email (optional, but must be valid if present)
+  emergencyContactEmail: [
+    [(v: string) => !v || /\S+@\S+\.\S+/.test(v), 'Please enter a valid email'],
+  ],
+
+  // Numbers
+  age: [[(v: any) => v === '' || v === undefined || (+v >= 0 && +v <= 150), 'Please enter a valid age']],
+  scale: [[(v: any) => v === '' || v === undefined || (+v >= 1 && +v <= 10), 'Scale must be between 1-10']],
+
+  // Composite: either age or dob must exist
+  ageOrDob: [[
+    (form: Partial<PCRFormData>) => {
+      const age = form.age?.toString() ?? ''
+      const dob = form.dob?.toString() ?? ''
+      return age.trim() !== '' || dob.trim() !== ''
+    },
+    'Either age or date of birth must be provided',
+  ]],
+}
 
 const formReducer = (state: FormState, action: FormAction): FormState => {
   switch (action.type) {

@@ -59,11 +59,12 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
 
   const defaultColumns = [
     { key: 'time', label: 'Time', width: 'w-24' },
-    { key: 'pulse', label: 'Pulse', width: 'w-20' },
-    { key: 'resp', label: 'RESP', width: 'w-20' },
+    { key: 'pulse', label: 'Pulse (rate, rhythm, qual.)', width: 'w-34' },
+    { key: 'resp', label: 'Resp (rate, rhythm, qual.)', width: 'w-34' },
     { key: 'bp', label: 'B/P', width: 'w-24' },
-    { key: 'loc', label: 'LOC', width: 'w-24' },
-    { key: 'skin', label: 'Skin', width: 'w-32' },
+    { key: 'loc', label: 'LOC, GCS', width: 'w-32' },
+    { key: 'skin', label: 'Skin, Temp', width: 'w-32' },
+    { key: 'pupils', label: 'Pupils', width: 'w-28' },
   ]
 
   const columns = customColumns || defaultColumns

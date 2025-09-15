@@ -128,9 +128,11 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex flex-col h-full">
           {/* Logo area */}
           <div className="flex items-center h-16 px-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="w-8 h-8 bg-medical-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">PCR</span>
-            </div>
+            <img
+              src="/images/vcrt_logo.png"
+              alt="PCR logo"
+              className="h-6 md:h-8 w-auto object-contain rounded-md"
+            />
             <span className="ml-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
               PCR System
             </span>
@@ -161,8 +163,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Footer */}
           <div className="flex-shrink-0 px-4 py-4 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400">PCR System v1.0</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Healthcare Documentation</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">PCR v1.0</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Documentation System</p>
           </div>
         </div>
       </div>
