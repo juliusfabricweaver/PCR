@@ -6,6 +6,7 @@ import {
   Select,
   RadioGroup,
   Checkbox,
+  CheckboxGroup,
   DatePicker,
   TimePicker,
   Textarea,
@@ -287,25 +288,6 @@ const PCRPage: React.FC = () => {
     showNotification('Sample data filled for testing', 'info')
   }
 
-  // Test PDF generation without validation
-  const testPDFGeneration = async () => {
-    setIsSubmitting(true)
-    try {
-      await pdfService.confirmPrintedWorkflow(data, async (confirmed, timestamp) => {
-        if (confirmed) {
-          showNotification('PDF test completed successfully!', 'success')
-        } else {
-          showNotification('PDF test cancelled', 'info')
-        }
-        setIsSubmitting(false)
-      })
-    } catch (error) {
-      console.error('PDF test failed:', error)
-      showNotification('PDF test failed', 'error')
-      setIsSubmitting(false)
-    }
-  }
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
@@ -334,23 +316,6 @@ const PCRPage: React.FC = () => {
           >
             Fill Sample Data
           </Button>
-          
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm" 
-            onClick={testPDFGeneration}
-            loading={isSubmitting}
-          >
-            Test PDF
-          </Button>
-
-          {isDirty && (
-            <div className="flex items-center space-x-1 text-amber-600 dark:text-amber-400">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm">Unsaved changes</span>
-            </div>
-          )}
 
           {!isDirty && isValid && (
             <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
@@ -618,10 +583,10 @@ const PCRPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Emergency Contact Name"
+              label="Emergency Contact Name (and Relationship)"
               value={data.emergencyContactName || ''}
               onChange={e => updateField('emergencyContactName', e.target.value)}
-              placeholder="Contact person name"
+              placeholder="Contact person name and relationship"
             />
 
             <Input
@@ -683,7 +648,7 @@ const PCRPage: React.FC = () => {
               label="Allergies"
               value={data.allergies || ''}
               onChange={e => updateField('allergies', e.target.value)}
-              placeholder="Known allergies..."
+              placeholder="Known allergies and reactions..."
               rows={2}
             />
 
@@ -691,7 +656,7 @@ const PCRPage: React.FC = () => {
               label="Medications"
               value={data.medications || ''}
               onChange={e => updateField('medications', e.target.value)}
-              placeholder="Current medications..."
+              placeholder="Current medications (name, dose, reason, taken as prescribed)..."
               rows={2}
             />
           </div>
@@ -709,7 +674,7 @@ const PCRPage: React.FC = () => {
               label="Last Meal"
               value={data.lastMeal || ''}
               onChange={e => updateField('lastMeal', e.target.value)}
-              placeholder="When and what was last consumed..."
+              placeholder="When and what was last consumed, and whether it sat well..."
               rows={2}
             />
           </div>
@@ -730,7 +695,7 @@ const PCRPage: React.FC = () => {
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <Checkbox
+              <CheckboxGroup
                 name="airwayManagement"
                 label="Airway Management"
                 options={[
@@ -741,20 +706,11 @@ const PCRPage: React.FC = () => {
                   { value: 'Pocket Mask', label: 'Pocket Mask' },
                   { value: 'Other', label: 'Other' },
                 ]}
-                value={data.airwayManagement || []}
+                value={Array.isArray(data.airwayManagement) ? data.airwayManagement : []}
                 onChange={(value) => updateField('airwayManagement', value)}
               />
               
-              {Array.isArray(data.airwayManagement) && data.airwayManagement.includes('Other') && (
-                <Input
-                  label="Other Airway Management (specify)"
-                  value={data.airwayManagementOther || ''}
-                  onChange={(e) => updateField('airwayManagementOther', e.target.value)}
-                  placeholder="Please specify"
-                />
-              )}
-              
-              <Checkbox
+              <CheckboxGroup
                 name="hemorrhageControl"
                 label="Hemorrhage Control"
                 options={[
@@ -762,11 +718,11 @@ const PCRPage: React.FC = () => {
                   { value: 'Dressing', label: 'Dressing' },
                   { value: 'Tourniquet', label: 'Tourniquet' },
                 ]}
-                value={data.hemorrhageControl || []}
+                value={Array.isArray(data.hemorrhageControl) ? data.hemorrhageControl : []}
                 onChange={(value) => updateField('hemorrhageControl', value)}
               />
               
-              <Checkbox
+              <CheckboxGroup
                 name="immobilization"
                 label="Immobilization"
                 options={[
@@ -774,7 +730,7 @@ const PCRPage: React.FC = () => {
                   { value: 'Splints', label: 'Splints' },
                   { value: 'C-spine Manually Held', label: 'C-spine Manually Held' },
                 ]}
-                value={data.immobilization || []}
+                value={Array.isArray(data.immobilization) ? data.immobilization : []}
                 onChange={(value) => updateField('immobilization', value)}
               />
             </div>
@@ -858,7 +814,7 @@ const PCRPage: React.FC = () => {
               label="Onset"
               value={data.onset || ''}
               onChange={(e) => updateField('onset', e.target.value)}
-              placeholder="When did it start?"
+              placeholder="Acute/chronic"
             />
             
             <Input
@@ -894,10 +850,11 @@ const PCRPage: React.FC = () => {
               placeholder="Pain scale"
             />
             
-            <TimePicker
+            <Input
               label="Time"
               value={data.time || ''}
               onChange={(e) => updateField('time', e.target.value)}
+              placeholder="What time did it occur?"
             />
           </div>
         </FormSection>
@@ -1004,6 +961,24 @@ const PCRPage: React.FC = () => {
                   value={data.unitNumber || ''}
                   onChange={(e) => updateField('unitNumber', e.target.value)}
                   placeholder="Paramedic unit number"
+                />
+              )}
+
+              {data.patientCareTransferred === 'Police' && (
+                <Input
+                  label="Badge Number"
+                  value={data.badgeNumber || ''}
+                  onChange={(e) => updateField('badgeNumber', e.target.value)}
+                  placeholder="Police badge number"
+                />
+              )}
+
+              {data.patientCareTransferred === 'Clinic' && (
+                <Input
+                  label="Clinic Name"
+                  value={data.clinicName || ''}
+                  onChange={(e) => updateField('clinicName', e.target.value)}
+                  placeholder="Clinic name"
                 />
               )}
             </div>

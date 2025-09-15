@@ -40,15 +40,17 @@ const Header: React.FC<HeaderProps> = ({
           </Button>
 
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-medical-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">PCR</span>
-            </div>
+            <img
+              src="/images/vcrt_logo.png"
+              alt="PCR logo"
+              className="h-8 md:h-10 w-auto object-contain rounded-md"
+            />
             <div>
               <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Patient Care Report
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Healthcare Documentation System
+                Documentation System
               </p>
             </div>
           </div>

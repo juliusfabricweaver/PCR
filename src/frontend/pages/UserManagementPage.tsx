@@ -8,14 +8,12 @@ import type { User } from '@/types'
 interface CreateUserForm {
   username: string
   password: string
-  email: string
   firstName: string
   lastName: string
   role: 'user' | 'admin'
 }
 
 interface EditUserForm {
-  email: string
   firstName: string
   lastName: string
   role: 'user' | 'admin'
@@ -32,7 +30,6 @@ const UserManagementPage = () => {
   const [createForm, setCreateForm] = useState<CreateUserForm>({
     username: '',
     password: '',
-    email: '',
     firstName: '',
     lastName: '',
     role: 'user'
@@ -44,7 +41,6 @@ const UserManagementPage = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [updating, setUpdating] = useState(false)
   const [editForm, setEditForm] = useState<EditUserForm>({
-    email: '',
     firstName: '',
     lastName: '',
     role: 'user',
@@ -107,12 +103,6 @@ const UserManagementPage = () => {
       errors.password = 'Password must be at least 8 characters'
     }
 
-    if (!createForm.email.trim()) {
-      errors.email = 'Email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createForm.email)) {
-      errors.email = 'Invalid email format'
-    }
-
     if (!createForm.firstName.trim()) {
       errors.firstName = 'First name is required'
     }
@@ -151,7 +141,6 @@ const UserManagementPage = () => {
       setCreateForm({
         username: '',
         password: '',
-        email: '',
         firstName: '',
         lastName: '',
         role: 'user'
@@ -192,7 +181,6 @@ const UserManagementPage = () => {
   const handleEditUser = (user: User) => {
     setEditingUser(user)
     setEditForm({
-      email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role as 'user' | 'admin',
@@ -204,12 +192,6 @@ const UserManagementPage = () => {
 
   const validateEditForm = (): boolean => {
     const errors: Partial<EditUserForm> = {}
-
-    if (!editForm.email.trim()) {
-      errors.email = 'Email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) {
-      errors.email = 'Invalid email format'
-    }
 
     if (!editForm.firstName.trim()) {
       errors.firstName = 'First name is required'
@@ -248,7 +230,6 @@ const UserManagementPage = () => {
       setShowEditModal(false)
       setEditingUser(null)
       setEditForm({
-        email: '',
         firstName: '',
         lastName: '',
         role: 'user',
@@ -361,9 +342,6 @@ const UserManagementPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
                       User
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
-                      Email
-                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
                       Role
                     </th>
@@ -400,9 +378,6 @@ const UserManagementPage = () => {
                             </div>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {user.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -503,15 +478,6 @@ const UserManagementPage = () => {
           />
 
           <Input
-            label="Email"
-            type="email"
-            value={createForm.email}
-            onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-            error={formErrors.email}
-            required
-          />
-
-          <Input
             label="Password"
             type="password"
             value={createForm.password}
@@ -582,15 +548,6 @@ const UserManagementPage = () => {
               required
             />
           </div>
-
-          <Input
-            label="Email"
-            type="email"
-            value={editForm.email}
-            onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-            error={editFormErrors.email}
-            required
-          />
 
           <div className="grid grid-cols-2 gap-4">
             <Select

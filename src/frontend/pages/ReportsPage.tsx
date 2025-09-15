@@ -89,6 +89,7 @@ const ReportsPage = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
+      timeZone: 'America/Toronto',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
