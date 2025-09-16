@@ -3,6 +3,7 @@
  */
 import jsPDF from 'jspdf'
 import type { PCRFormData, VitalSign, VitalSigns2 } from '@/types'
+import { OxygenProtocol } from '../types'
 
 interface PDFOptions {
   includeImages?: boolean
@@ -69,6 +70,58 @@ function renderFieldsRow(
   return yPosition + 4
 }
 
+	// Add this helper near renderFieldsRow
+	function renderMultilineBlock(
+    pdf: jsPDF,
+    label: string,
+    value: string,
+    y: number,
+    options: Required<PDFOptions>,
+    contentWidth: number
+  ): number {
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const left = options.margins.left;
+    const bottom = options.margins.bottom;
+    const lineHeight = pdf.getLineHeightFactor() * (pdf.getFontSize() * 0.3528);
+
+    // Ensure there's space for at least one line
+    if (y + lineHeight > pageHeight - bottom) {
+      pdf.addPage();
+      y = options.margins.top;
+    }
+
+    // Draw label (bold)
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(label, left, y);
+
+    // Wrap value to remaining width
+    const labelWidth = pdf.getTextWidth(label + ' ');
+    const valueMaxWidth = Math.max(10, contentWidth - labelWidth);
+    const lines = pdf.splitTextToSize(value || '', valueMaxWidth);
+
+    // Draw value (normal), aligned to the right of the label
+    pdf.setFont('helvetica', 'normal');
+    const xVal = left + labelWidth;
+
+    if (lines.length === 0) {
+      // keep the row height even when empty
+      y += lineHeight + 2;
+      return y;
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      if (y + lineHeight > pageHeight - bottom) {
+        pdf.addPage();
+        y = options.margins.top;
+      }
+      pdf.text(lines[i], xVal, y);
+      y += lineHeight;
+    }
+
+    return y + 1; // small spacer after the block
+  }
+
+
 export class PDFService {
   private defaultOptions: Required<PDFOptions> = {
     includeImages: true,
@@ -122,26 +175,27 @@ export class PDFService {
       // Assessment
       yPosition = this.addAssessment(pdf, data, opts, yPosition, contentWidth)
 
+      // Injury Canvas (if available and enabled)
+      if (opts.includeImages && data.injuryCanvas) {
+        yPosition = await this.addInjuryCanvas(pdf, data.injuryCanvas, opts, yPosition, contentWidth, data)
+      }
+
       // Vital Signs
       if (data.vitalSigns?.length) {
         yPosition = this.addVitalSigns(pdf, data.vitalSigns, opts, yPosition, contentWidth)
       }
 
-      // Secondary Assessment
-      if (data.vitalSigns2?.length) {
-        yPosition = this.addSecondaryAssessment(pdf, data.vitalSigns2, opts, yPosition, contentWidth)
-      }
+      pdf.addPage()
+      yPosition = opts.margins.top
+      yPosition = this.addHeader(pdf, opts, yPosition)
 
-      // Treatment & Procedures
-      yPosition = this.addTreatmentAndProcedures(pdf, data, opts, yPosition, contentWidth)
+      // Oxygen Protocol
+      if (data.oxygenProtocol) {
+        yPosition = this.addOxygenProtocol(pdf, data.oxygenProtocol, data.vitalSigns2, opts, yPosition, contentWidth)
+      }
 
       // Transport Information
       yPosition = this.addTransportInformation(pdf, data, opts, yPosition, contentWidth)
-
-      // Injury Canvas (if available and enabled)
-      if (opts.includeImages && data.injuryCanvas) {
-        yPosition = await this.addInjuryCanvas(pdf, data.injuryCanvas, opts, yPosition, contentWidth)
-      }
 
       // Signatures and Footer
       yPosition = this.addSignaturesAndFooter(pdf, data, opts, yPosition, contentWidth)
@@ -530,9 +584,10 @@ export class PDFService {
       pdf,
       [
         { label: 'Emergency Contact Name (and Relationship):', value: data.emergencyContactName || '' },
-        { label: 'Conatacted?:', value: data.contacted || '' },
+        { label: 'Contacted?:', value: data.contacted || '' },
+        { label: 'Contacted by:', value: data.contactedBy || '' },
       ],
-      [2, 2], 
+      [2, 1, 1], 
       yPosition,
       options,
       contentWidth
@@ -567,27 +622,27 @@ export class PDFService {
 
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
-    
-    yPosition = renderFieldsRow(
-      pdf, [{ label: 'Chief Complaint:', value: data.chiefComplaint || '' }], [4], yPosition, options, contentWidth
+
+    yPosition = renderMultilineBlock(
+      pdf, `Chief Complaint:`, data.chiefComplaint || '', yPosition, options, contentWidth
     )
-    yPosition = renderFieldsRow(
-      pdf, [{ label: 'Signs/Symptoms:', value: data.signsSymptoms || '' }], [4], yPosition, options, contentWidth
+    yPosition = renderMultilineBlock(
+      pdf, `Signs & Symptoms:`, data.signsSymptoms|| '', yPosition, options, contentWidth
     )
-    yPosition = renderFieldsRow(
-      pdf, [{ label: 'Allergies:', value: data.allergies || '' }], [4], yPosition, options, contentWidth
+    yPosition = renderMultilineBlock(
+      pdf, `Allergies:`, data.allergies || '', yPosition, options, contentWidth
     )
-    yPosition = renderFieldsRow(
-      pdf, [{ label: 'Medications:', value: data.medications || '' }], [4], yPosition, options, contentWidth
+    yPosition = renderMultilineBlock(
+      pdf, `Medications:`, data.medications || '', yPosition, options, contentWidth
     )
-    yPosition = renderFieldsRow(
-      pdf, [{ label: 'Pertinent Medical History:', value: data.medicalHistory || '' }], [4], yPosition, options, contentWidth
+    yPosition = renderMultilineBlock(
+      pdf, `Pertinent Medical History:`, data.medicalHistory || '', yPosition, options, contentWidth
     )
-    yPosition = renderFieldsRow(
-      pdf, [{ label: 'Last Meal:', value: data.lastMeal || '' }], [4], yPosition, options, contentWidth
+    yPosition = renderMultilineBlock(
+      pdf, `Last Meal:`, data.lastMeal || '', yPosition, options, contentWidth
     )
-    yPosition = renderFieldsRow(
-      pdf, [{ label: 'Rapid Body Survey Findings:', value: data.bodySurvey || '' }], [4], yPosition, options, contentWidth
+    yPosition = renderMultilineBlock(
+      pdf, `Rapid Body Survey Findings:`, data.bodySurvey || '', yPosition, options, contentWidth
     )
 
     return yPosition + 4
@@ -603,189 +658,84 @@ export class PDFService {
     yPosition: number,
     contentWidth: number
   ): number {
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('ASSESSMENT', options.margins.left, yPosition)
-    yPosition += 8
-
-    pdf.setFont('helvetica', 'normal')
-    
-    if (data.bodySurvey) {
-      pdf.text('Rapid Body Survey:', options.margins.left, yPosition)
-      yPosition += 5
-      const lines = pdf.splitTextToSize(data.bodySurvey, contentWidth - 10)
-      pdf.text(lines, options.margins.left + 10, yPosition)
-      yPosition += (lines.length * 5) + 5
-    }
-
-    if (data.positionOfPatient) {
-      pdf.text(`Position of Patient: ${data.positionOfPatient}`, options.margins.left, yPosition)
-      yPosition += 8
-    }
-
-    return yPosition + 10
-  }
-
-  /**
-   * Add vital signs table
-   */
-  private addVitalSigns(
-    pdf: jsPDF,
-    vitalSigns: VitalSign[],
-    options: Required<PDFOptions>,
-    yPosition: number,
-    contentWidth: number
-  ): number {
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
-    pdf.text('VITAL SIGNS', options.margins.left, yPosition)
-    yPosition += 4
-
-    // Only show first 3 vital sign entries to save space
-    const limitedVitals = vitalSigns.slice(0, 3).filter(v => v.time || v.pulse || v.respiration)
+    const boxHeight = 8
+    const boxX = options.margins.left
+    const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
+    const boxY = yPosition
+    pdf.setFillColor(100, 100, 100)
+    pdf.rect(boxX, boxY, boxWidth, boxHeight, 'F')
+    pdf.setTextColor(255, 255, 255)
+    pdf.text('TREATMENT PERFORMED / PHYSICAL FINDINGS', boxX + 2, boxY + boxHeight - 3)
+    pdf.setTextColor(0, 0, 0)
+    yPosition += boxHeight + 6
     
-    if (limitedVitals.length > 0) {
-      const headers = ['Time', 'Pulse', 'Resp', 'BP', 'O2Sat']
-      const colWidth = contentWidth / headers.length
-      
-      pdf.setFontSize(7)
-      pdf.setFont('helvetica', 'bold')
-      headers.forEach((header, i) => {
-        pdf.text(header, options.margins.left + (i * colWidth), yPosition)
-      })
-      yPosition += 3
-
-      pdf.setFont('helvetica', 'normal')
-      limitedVitals.forEach((vital) => {
-        const row = [
-          vital.time || '',
-          vital.pulse || '',
-          vital.respiration || '',
-          vital.bloodPressure || '',
-          vital.oxygenSaturation || '',
-        ]
-        
-        row.forEach((cell, i) => {
-          const text = cell.toString().substring(0, 8) // Limit cell text
-          pdf.text(text, options.margins.left + (i * colWidth), yPosition)
-        })
-        yPosition += 3
-      })
-    }
-
-    return yPosition + 4
-  }
-
-  /**
-   * Add secondary assessment
-   */
-  private addSecondaryAssessment(
-    pdf: jsPDF,
-    vitalSigns2: VitalSigns2[],
-    options: Required<PDFOptions>,
-    yPosition: number,
-    contentWidth: number
-  ): number {
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('SECONDARY ASSESSMENT', options.margins.left, yPosition)
-    yPosition += 8
-
-    // Table headers
-    const headers = ['Time', 'Pulse', 'Blood Pressure', 'Respiration', 'O2 Sat', 'Temperature', 'Skin']
-    const colWidth = contentWidth / headers.length
-    
-    pdf.setFont('helvetica', 'bold')
-    headers.forEach((header, i) => {
-      pdf.text(header, options.margins.left + (i * colWidth), yPosition)
-    })
-    yPosition += 6
-
-    // Table data
-    pdf.setFont('helvetica', 'normal')
-    vitalSigns2.forEach((vital) => {
-      const row = [
-        vital.time || '',
-        vital.pulse || '',
-        vital.bloodPressure || '',
-        vital.respiration || '',
-        vital.oxygenSaturation || '',
-        vital.temperature || '',
-        vital.skin || '',
-      ]
-      
-      row.forEach((cell, i) => {
-        pdf.text(cell.toString(), options.margins.left + (i * colWidth), yPosition)
-      })
-      yPosition += 5
-    })
-
-    return yPosition + 10
-  }
-
-  /**
-   * Add treatment and procedures section
-   */
-  private addTreatmentAndProcedures(
-    pdf: jsPDF,
-    data: PCRFormData,
-    options: Required<PDFOptions>,
-    yPosition: number,
-    contentWidth: number
-  ): number {
-    pdf.setFontSize(9)
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('TREATMENT & PROCEDURES', options.margins.left, yPosition)
-    yPosition += 4
-
-    pdf.setFontSize(7)
+    pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
     
-    // Add treatment data in compact format
-    const treatments = []
-    if (data.airwayManagement?.length) treatments.push(`Airway: ${data.airwayManagement.join(', ')}`)
-    if (data.hemorrhageControl?.length) treatments.push(`Hemorrhage: ${data.hemorrhageControl.join(', ')}`)
-    if (data.immobilization?.length) treatments.push(`Immob: ${data.immobilization.join(', ')}`)
-    if (data.positionOfPatient) treatments.push(`Position: ${data.positionOfPatient}`)
+    const airwayManagement = Array.isArray(data.airwayManagement) && data.airwayManagement.length > 0
+    ? data.airwayManagement.join(', ')
+    : ''
+    yPosition = renderFieldsRow( pdf, [{ label: 'Airway Management:', value: airwayManagement || '' }], [4], yPosition, options, contentWidth )
     
-    for (const treatment of treatments) {
-      const truncated = treatment.substring(0, 80) + (treatment.length > 80 ? '...' : '')
-      pdf.text(truncated, options.margins.left, yPosition)
-      yPosition += 3
-    }
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: 'CPR Time Started:', value: data.timeStarted || '' },
+        { label: 'CPR Number of Cycles:', value: data.numberOfCycles || '' },
+      ],
+      [2, 2], 
+      yPosition,
+      options,
+      contentWidth
+    )
 
-    return yPosition + 4
-  }
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: 'AED Number of Shocks:', value: data.numberOfShocks || '' },
+        { label: 'Shock Not Advised:', value: data.shockNotAdvised || '' },
+      ],
+      [2, 2], 
+      yPosition,
+      options,
+      contentWidth
+    )
 
-  /**
-   * Add transport information
-   */
-  private addTransportInformation(
-    pdf: jsPDF,
-    data: PCRFormData,
-    options: Required<PDFOptions>,
-    yPosition: number,
-    contentWidth: number
-  ): number {
-    pdf.setFontSize(9)
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('TRANSPORT & TRANSFER', options.margins.left, yPosition)
-    yPosition += 4
+    const hemorrhageControl = Array.isArray(data.hemorrhageControl) && data.hemorrhageControl.length > 0
+    ? data.hemorrhageControl.join(', ')
+    : ''
+    const hasTourniquet =
+      Array.isArray(data.hemorrhageControl) &&
+      data.hemorrhageControl.includes('Tourniquet');
+    yPosition = renderFieldsRow( 
+      pdf, 
+      [
+        { label: 'Hemorrhage Control:', value: hemorrhageControl || '' },
+        { label: 'Tourniquet Time:', value: hasTourniquet ? (data.timeApplied || '') : '' },
+        { label: 'Turns:', value: hasTourniquet ? (String(data.numberOfTurns ?? '')) : '' },
+      ],
+      [2, 1, 1], 
+      yPosition, 
+      options, 
+      contentWidth 
+    )
 
-    pdf.setFontSize(7)
-    pdf.setFont('helvetica', 'normal')
-    
-    if (data.patientCareTransferred) {
-      pdf.text(`Transferred to: ${data.patientCareTransferred}`, options.margins.left, yPosition)
-      yPosition += 3
-    }
-    if (data.timeCareTransferred) {
-      pdf.text(`Time: ${data.timeCareTransferred}`, options.margins.left, yPosition)
-      yPosition += 3
-    }
-    if (data.comments) {
-      const truncated = data.comments.substring(0, 100) + (data.comments.length > 100 ? '...' : '')
-      pdf.text(`Description: ${truncated}`, options.margins.left, yPosition)
-      yPosition += 3
-    }
+    const immobilization = Array.isArray(data.immobilization) && data.immobilization.length > 0
+    ? data.immobilization.join(', ')
+    : ''
+    yPosition = renderFieldsRow( 
+      pdf, 
+      [
+        { label: 'Immobilization:', value: immobilization || '' },
+        { label: 'Patient Position:', value: data.positionOfPatient || '' },
+      ], 
+      [2, 2], 
+      yPosition, 
+      options, 
+      contentWidth,
+    )
 
     return yPosition + 4
   }
@@ -798,12 +748,12 @@ export class PDFService {
     canvasData: string,
     options: Required<PDFOptions>,
     yPosition: number,
-    contentWidth: number
+    contentWidth: number,
+    data: PCRFormData
   ): Promise<number> {
     try {
       pdf.setFont('helvetica', 'bold')
-      pdf.text('INJURY DIAGRAM', options.margins.left, yPosition)
-      yPosition += 10
+      pdf.text('Pain Assessment', options.margins.left, yPosition)
 
       // Extract image data from canvas data
       let imageDataUrl = canvasData
@@ -820,20 +770,49 @@ export class PDFService {
         console.log('Canvas data is not JSON, assuming it\'s an image data URL')
       }
 
-      // Add canvas image - smaller size for single page
-      const imgWidth = contentWidth * 0.5
-      const imgHeight = imgWidth * 0.4 // Maintain aspect ratio
-      
+      // Two-column layout (left: text, right: image)
+      const columnGap = 8
+      const leftColWidth = (contentWidth - columnGap) / 2
+      const imgWidth = (contentWidth - columnGap) / 2
+      const imgHeight = imgWidth * 0.4 // Maintain your chosen aspect ratio
+      const startY = yPosition
+
+      // --- Draw image on the RIGHT half ---
+      const rightX = options.margins.left + leftColWidth + columnGap
       pdf.addImage(
         imageDataUrl,
         'PNG',
-        options.margins.left + (contentWidth - imgWidth) / 2,
-        yPosition,
+        rightX,
+        startY,
         imgWidth,
         imgHeight
       )
 
-      return yPosition + imgHeight + 5
+      // --- Render OPQRST on the LEFT half ---
+      let yText = startY
+      yText += 6
+      yText = renderFieldsRow(
+        pdf, [{ label: 'Onset:', value: data.onset || '' }], [4], yText, options, leftColWidth
+      )
+      yText = renderFieldsRow(
+        pdf, [{ label: 'Provocation:', value: data.provocation || '' }], [4], yText, options, leftColWidth
+      )
+      yText = renderFieldsRow(
+        pdf, [{ label: 'Quality:', value: data.quality || '' }], [4], yText, options, leftColWidth
+      )
+      yText = renderFieldsRow(
+        pdf, [{ label: 'Radiation:', value: data.radiation || '' }], [4], yText, options, leftColWidth
+      )
+      yText = renderFieldsRow(
+        pdf, [{ label: 'Scale:', value: data.scale || '' }], [4], yText, options, leftColWidth
+      )
+      yText = renderFieldsRow(
+        pdf, [{ label: 'Time:', value: data.time || '' }], [4], yText, options, leftColWidth
+      )
+
+      // Advance Y by the taller of image vs text, plus a small spacer
+      const textHeight = yText - startY
+      return startY + Math.max(imgHeight, textHeight) + 5
     } catch (error) {
       console.error('Failed to add injury canvas:', error)
       return yPosition
@@ -841,7 +820,469 @@ export class PDFService {
   }
 
   /**
-   * Add signatures and footer
+   * Add vital signs table
+   */
+  private addVitalSigns(
+    pdf: jsPDF,
+    vitalSigns: VitalSign[],
+    options: Required<PDFOptions>,
+    yPosition: number,
+    contentWidth: number
+  ): number {
+    pdf.setFontSize(9)
+    pdf.setFont('helvetica', 'bold')
+    const boxHeight = 8
+    const boxX = options.margins.left
+    const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
+    const boxY = yPosition
+    pdf.setFillColor(100, 100, 100)
+    pdf.rect(boxX, boxY, boxWidth, boxHeight, 'F')
+    pdf.setTextColor(255, 255, 255)
+    pdf.text('VITAL SIGNS', boxX + 2, boxY + boxHeight - 3)
+    pdf.setTextColor(0, 0, 0)
+    yPosition += boxHeight + 6
+
+    const headers = ['Time', 'Pulse', 'Resp', 'B/P', 'LOC,GCS', 'Skin,Temp', 'Pupils']
+    const nCols = headers.length
+    const colWidth = contentWidth / nCols
+    const rowHeight = 6
+    const x0 = options.margins.left
+
+    // ----- Header row -----
+    pdf.setFillColor(220, 220, 220)
+    pdf.rect(x0, yPosition, contentWidth, rowHeight, 'F')   // header background
+
+    pdf.setFontSize(8)
+    pdf.setFont('helvetica', 'bold')
+    headers.forEach((header, i) => {
+      const cellX = x0 + i * colWidth
+      pdf.text(header, cellX + 1, yPosition + 4)           // small padding
+    })
+
+    // Outer header border
+    pdf.setDrawColor(0)
+    pdf.rect(x0, yPosition, contentWidth, rowHeight)
+
+    // Vertical column lines across header
+    for (let i = 1; i < nCols; i++) {
+      const vx = x0 + i * colWidth
+      pdf.line(vx, yPosition, vx, yPosition + rowHeight)
+    }
+
+    yPosition += rowHeight
+
+    // ----- Data rows -----
+    pdf.setFont('helvetica', 'normal')
+    vitalSigns.forEach((vital) => {
+      const row = [
+        vital.time || '',
+        vital.pulse || '',
+        vital.resp || '',
+        vital.bp || '',
+        vital.loc || '',
+        vital.skin || '',
+        vital.pupils || '',
+      ]
+
+      // Row outer border
+      pdf.rect(x0, yPosition, contentWidth, rowHeight)
+
+      // Vertical lines for this row
+      for (let i = 1; i < nCols; i++) {
+        const vx = x0 + i * colWidth
+        pdf.line(vx, yPosition, vx, yPosition + rowHeight)
+      }
+
+      // Cell text
+      row.forEach((cell, i) => {
+        const cellX = x0 + i * colWidth
+        pdf.text(String(cell), cellX + 1, yPosition + 4)   // padding inside cell
+      })
+
+      yPosition += rowHeight
+    })
+
+    return yPosition + 4
+  }
+
+  /**
+   * Add O2 Protocol
+   */
+  private addOxygenProtocol(
+    pdf: jsPDF,
+    oxygenProtocol: OxygenProtocol,
+    vitalSigns2: VitalSigns2[],
+    options: Required<PDFOptions>,
+    yPosition: number,
+    contentWidth: number
+  ): number {
+    // Header bar
+    pdf.setFontSize(9)
+    pdf.setFont('helvetica', 'bold')
+    const boxHeight = 8
+    const boxX = options.margins.left
+    const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
+    const boxY = yPosition
+    pdf.setFillColor(100, 100, 100)
+    pdf.rect(boxX, boxY, boxWidth, boxHeight, 'F')
+    pdf.setTextColor(255, 255, 255)
+    pdf.text('OXYGEN PROTOCOL', boxX + 2, boxY + boxHeight - 3)
+    pdf.setTextColor(0, 0, 0)
+    yPosition += boxHeight + 6
+
+    pdf.setFontSize(8)
+    pdf.setFont('helvetica', 'normal')
+
+    // 1) Oxygen Saturation Assessment
+    const hasSaturationAny =
+      !!oxygenProtocol?.saturation_range || oxygenProtocol?.spo2 !== undefined || !!oxygenProtocol?.spo2_acceptable
+    if (hasSaturationAny) {
+      yPosition = renderFieldsRow(
+        pdf,
+        [
+          { label: 'Saturation Target Range: ', value: oxygenProtocol?.saturation_range || '' },
+          { label: 'Initial SpO2 %: ', value: oxygenProtocol?.spo2 || '' },
+          { label: 'Initial SpO2 Acceptable: ', value: oxygenProtocol?.spo2_acceptable || '' },
+        ],
+        [2, 1, 1],
+        yPosition,
+        options,
+        contentWidth
+      )
+    }
+
+    // 2) Oxygen Therapy Decision
+    if (oxygenProtocol?.oxygen_given) {
+      yPosition = renderFieldsRow(
+        pdf,
+        [{ label: 'Oxygen Therapy Given?: ', value: oxygenProtocol.oxygen_given || '' },],
+        [4],
+        yPosition,
+        options,
+        contentWidth
+      )
+
+      // Reason (string or array)
+      const reason = Array.isArray(oxygenProtocol?.reasonForO2Therapy)
+        ? oxygenProtocol.reasonForO2Therapy.filter(Boolean).join(', ')
+        : (oxygenProtocol?.reasonForO2Therapy ?? '')
+      if (oxygenProtocol.oxygen_given === 'yes' && reason) {
+        yPosition = renderFieldsRow(
+          pdf,
+          [{ label: 'Reason for O2 Therapy: ', value: reason }],
+          [4],
+          yPosition,
+          options,
+          contentWidth
+        )
+      }
+
+      // Times
+      const hasTimes = !!oxygenProtocol?.timeTherapyStarted || !!oxygenProtocol?.timeTherapyEnded
+      if (oxygenProtocol.oxygen_given === 'yes' && hasTimes) {
+        yPosition = renderFieldsRow(
+          pdf,
+          [
+            { label: 'Time Therapy Started: ', value: oxygenProtocol?.timeTherapyStarted || '' },
+            { label: 'Time Therapy Ended: ', value: oxygenProtocol?.timeTherapyEnded || '' },
+          ],
+          [2, 2],
+          yPosition,
+          options,
+          contentWidth
+        )
+      }
+
+      // Initial flow + device
+      const hasInitFlowDevice = oxygenProtocol?.flowRate != null || !!oxygenProtocol?.deliveryDevice
+      if (oxygenProtocol.oxygen_given === 'yes' && hasInitFlowDevice) {
+        yPosition = renderFieldsRow(
+          pdf,
+          [
+            { label: 'Initial Flow Rate (L/min):', value: oxygenProtocol?.flowRate || '' },
+            { label: 'Delivery Device:', value: oxygenProtocol?.deliveryDevice || '' },
+          ],
+          [2, 2],
+          yPosition,
+          options,
+          contentWidth
+        )
+      }
+
+      		// 3) Flow Rate Alterations table (transposed)
+		const alterations = (oxygenProtocol?.flowRateAlterations || []).filter(
+			(a) => (a?.time && a.time.trim() !== '') || (a?.flowRate && String(a.flowRate).trim() !== '')
+		)
+
+		if (oxygenProtocol.oxygen_given === 'yes' && alterations.length > 0) {
+			// small sub-header
+			yPosition += 4
+			pdf.setFont('helvetica', 'bold')
+			pdf.text('Flow Rate Alterations:', options.margins.left, yPosition)
+			pdf.setFont('helvetica', 'normal')
+			yPosition += 4
+
+			// transposed grid: rows = fields, columns = entries
+			const labels = ['Time of Change', 'Flow Rate (L/min)']
+			const nRows = labels.length
+			const nDataCols = Math.max(1, alterations.length)
+
+			const x0 = options.margins.left
+			const rowHeight = 6
+			const labelColWidth = Math.min(30, contentWidth * 0.25)
+
+			// columns take 1/8 width unless more than 8 entries, then fit all
+			const denom = Math.max(8, nDataCols)
+			const dataColWidth = (contentWidth - labelColWidth) / denom
+			const tableWidth = labelColWidth + nDataCols * dataColWidth
+			const tableHeight = nRows * rowHeight
+
+			// left header column background
+			pdf.setFillColor(220, 220, 220)
+			pdf.rect(x0, yPosition, labelColWidth, tableHeight, 'F')
+
+			// outer border (actual used width)
+			pdf.setDrawColor(0)
+			pdf.rect(x0, yPosition, tableWidth, tableHeight)
+
+			// black vertical separator after labels column
+			const sepX = x0 + labelColWidth
+			pdf.line(sepX, yPosition, sepX, yPosition + tableHeight)
+
+			// vertical lines between data columns
+			for (let c = 1; c < nDataCols; c++) {
+				const vx = x0 + labelColWidth + c * dataColWidth
+				pdf.line(vx, yPosition, vx, yPosition + tableHeight)
+			}
+
+			// horizontal lines between rows
+			for (let r = 1; r < nRows; r++) {
+				const hy = yPosition + r * rowHeight
+				pdf.line(x0, hy, x0 + tableWidth, hy)
+			}
+
+			// row labels
+			pdf.setFontSize(8)
+			pdf.setFont('helvetica', 'bold')
+			labels.forEach((label, r) => {
+				pdf.text(label, x0 + 1, yPosition + r * rowHeight + 4)
+			})
+
+			// data cells
+			pdf.setFont('helvetica', 'normal')
+			for (let c = 0; c < nDataCols; c++) {
+				const a = alterations[c] || {}
+				const colValues = [
+					a?.time ?? '',
+					a?.flowRate != null ? String(a.flowRate) : '',
+				]
+
+				colValues.forEach((cell, r) => {
+					const cellX = x0 + labelColWidth + c * dataColWidth
+					const cellY = yPosition + r * rowHeight
+					pdf.text(String(cell), cellX + 1, cellY + 4)
+				})
+			}
+
+			yPosition += tableHeight + 6
+		}
+
+      // 4) End of Therapy
+      const hasEnd = !!oxygenProtocol?.reasonForEndingTherapy || !!oxygenProtocol?.whoStartedTherapy
+      if (hasEnd) {
+        // Reason
+        if (oxygenProtocol?.reasonForEndingTherapy) {
+          yPosition = renderFieldsRow(
+            pdf,
+            [
+              { label: 'Reason for Ending Therapy:', value: oxygenProtocol.reasonForEndingTherapy },
+              { label: 'Who Started Therapy:', value: oxygenProtocol.whoStartedTherapy },
+            ],
+            [2, 2],
+            yPosition,
+            options,
+            contentWidth
+          )
+        }
+      }
+      yPosition += 4
+    }
+    
+		pdf.setFont('helvetica', 'bold')
+		pdf.text('SpO2 Table:', options.margins.left, yPosition)
+		pdf.setFont('helvetica', 'normal')
+		yPosition += 4
+
+		const labels = ['Time', 'SpO2'] // rows
+		const nRows = labels.length
+		const nDataCols = Math.max(1, (vitalSigns2?.length || 0))
+
+		const x0 = options.margins.left
+		const rowHeight = 6
+		const labelColWidth = Math.min(30, contentWidth * 0.25) // left header column
+
+		// columns take 1/8 width unless more than 8 entries, then fit all
+		const denom = Math.max(8, nDataCols)
+		const dataColWidth = (contentWidth - labelColWidth) / denom
+		const tableWidth = labelColWidth + nDataCols * dataColWidth
+		const tableHeight = nRows * rowHeight
+
+		// Left header column background
+		pdf.setFillColor(220, 220, 220)
+		pdf.rect(x0, yPosition, labelColWidth, tableHeight, 'F')
+
+		// Outer border (use actual used width)
+		pdf.setDrawColor(0)
+		pdf.rect(x0, yPosition, tableWidth, tableHeight)
+
+		// *** BLACK vertical line after the labels column ***
+		const sepX = x0 + labelColWidth
+		pdf.line(sepX, yPosition, sepX, yPosition + tableHeight)
+
+		// Vertical lines between data columns
+		for (let c = 1; c < nDataCols; c++) {
+			const vx = x0 + labelColWidth + c * dataColWidth
+			pdf.line(vx, yPosition, vx, yPosition + tableHeight)
+		}
+
+		// Horizontal lines between rows
+		for (let r = 1; r < nRows; r++) {
+			const hy = yPosition + r * rowHeight
+			pdf.line(x0, hy, x0 + tableWidth, hy)
+		}
+
+		// Row labels (left header col)
+		pdf.setFontSize(8)
+		pdf.setFont('helvetica', 'bold')
+		labels.forEach((label, r) => {
+			pdf.text(label, x0 + 1, yPosition + r * rowHeight + 4)
+		})
+
+		// Data cells
+		pdf.setFont('helvetica', 'normal')
+		for (let c = 0; c < nDataCols; c++) {
+			const vital = vitalSigns2[c] || {}
+			const colValues = [
+				vital.time ?? '',
+				(vital.spo2 != null ? String(vital.spo2) : ''),
+			]
+
+			colValues.forEach((cell, r) => {
+				const cellX = x0 + labelColWidth + c * dataColWidth
+				const cellY = yPosition + r * rowHeight
+				pdf.text(String(cell), cellX + 1, cellY + 4) // padding
+			})
+		}
+
+		yPosition += tableHeight + 4
+
+    return yPosition
+  }
+
+
+  /**
+   * Add comments and transport information
+   */
+  private addTransportInformation(
+    pdf: jsPDF,
+    data: PCRFormData,
+    options: Required<PDFOptions>,
+    yPosition: number,
+    contentWidth: number
+  ): number {
+    pdf.setFontSize(9)
+    pdf.setFont('helvetica', 'bold')
+    const boxHeight = 8
+    const boxX = options.margins.left
+    const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
+    const boxY = yPosition
+    pdf.setFillColor(100, 100, 100)
+    pdf.rect(boxX, boxY, boxWidth, boxHeight, 'F')
+    pdf.setTextColor(255, 255, 255)
+    pdf.text('CALL COMMENTS', boxX + 2, boxY + boxHeight - 3)
+    pdf.setTextColor(0, 0, 0)
+    yPosition += boxHeight + 6
+
+    pdf.setFontSize(8)
+    pdf.setFont('helvetica', 'normal')
+
+    yPosition = renderMultilineBlock(
+      pdf,
+      '',
+      (data.comments || '').trim(),
+      yPosition,
+      options,
+      boxWidth 
+    );
+    
+    const boxHeight2 = 8
+    const boxX2 = options.margins.left
+    const boxWidth2 = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
+    const boxY2 = yPosition
+    pdf.setFontSize(9)
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFillColor(100, 100, 100)
+    pdf.rect(boxX2, boxY2, boxWidth2, boxHeight2, 'F')
+    pdf.setTextColor(255, 255, 255)
+    pdf.text('PATIENT TRANSFER DETAILS', boxX2 + 2, boxY2 + boxHeight2 - 3)
+    pdf.setTextColor(0, 0, 0)
+    yPosition += boxHeight2 + 6
+
+    pdf.setFontSize(8)
+    pdf.setFont('helvetica', 'normal')
+
+    const transferFields: { label: string; value: string }[] = [
+      { label: 'Patient Care Transferred: ', value: data.patientCareTransferred || '' },
+    ]
+
+    let spans: number[] = [2, 2]
+
+    // Conditionally add the extra field based on who received care
+    if (data.patientCareTransferred === 'Paramedics' && data.unitNumber) {
+      transferFields.push({ label: 'Unit #:', value: data.unitNumber })
+      transferFields.push({ label: 'Time Care Transferred: ', value: data.timeCareTransferred || '' })
+      spans = [2, 1, 1]
+    } else if (data.patientCareTransferred === 'Police' && data.badgeNumber) {
+      transferFields.push({ label: 'Badge #:', value: data.badgeNumber })
+      transferFields.push({ label: 'Time Care Transferred: ', value: data.timeCareTransferred || '' })
+      spans = [2, 1, 1]
+    } else if (data.patientCareTransferred === 'Clinic' && data.clinicName) {
+      transferFields.push({ label: 'Clinic:', value: data.clinicName })
+      transferFields.push({ label: 'Time Care Transferred: ', value: data.timeCareTransferred || '' })
+      spans = [2, 1, 1]
+    } else {
+      transferFields.push({ label: 'Time Care Transferred: ', value: data.timeCareTransferred || '' })
+      spans = [3, 1]
+    }
+
+    yPosition = renderFieldsRow(
+      pdf,
+      transferFields,
+      spans,
+      yPosition,
+      options,
+      contentWidth
+    )
+
+    pdf.setFont('helvetica', 'bold')
+		pdf.text('Comments: ', options.margins.left, yPosition)
+		pdf.setFont('helvetica', 'normal')
+		yPosition += 4
+
+    yPosition = renderMultilineBlock(
+      pdf,
+      '',
+      (data.transferComments || '').trim(),
+      yPosition,
+      options,
+      contentWidth 
+    );
+
+    return yPosition + 4
+  }
+
+  /**
+   * To delete
    */
   private addSignaturesAndFooter(
     pdf: jsPDF,
@@ -852,28 +1293,6 @@ export class PDFService {
   ): number {
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
-    pdf.text('SIGNATURES', options.margins.left, yPosition)
-    yPosition += 4
-
-    pdf.setFontSize(7)
-    pdf.setFont('helvetica', 'normal')
-    
-    // Compact signature info
-    const sigWidth = contentWidth / 2 - 10
-    
-    // Primary responder
-    pdf.text(`PSM: ${data.primaryPSM || '_________________'}`, options.margins.left, yPosition)
-    
-    // Supervisor
-    pdf.text(`Supervisor: ${data.supervisor || '_________________'}`, options.margins.left + sigWidth, yPosition)
-    
-    yPosition += 6
-
-    // Date and time
-    const now = new Date()
-    pdf.text(`Date: ${now.toLocaleDateString()} Time: ${now.toLocaleTimeString()}`, options.margins.left, yPosition)
-
-    return yPosition + 4
   }
 
   /**
