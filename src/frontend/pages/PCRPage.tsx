@@ -68,6 +68,11 @@ const PCRPage: React.FC = () => {
           setIsLoadingDraft(false)
         }
       }
+
+      if (!data.date) {
+        const todayISO = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+        updateField('date', todayISO);
+      }
     }
 
     loadDraftFromUrl()
@@ -350,8 +355,11 @@ const PCRPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <DatePicker
               label="Date"
-              value={data.date || formatDate(new Date())}
-              onChange={e => updateField('date', e.target.value)}
+              value={data.date ?? ''}   // don’t show fallback directly here
+              onChange={(v: any) => {
+                const next = typeof v === 'string' ? v : v?.target?.value ?? '';
+                updateField('date', next);
+              }}
               error={errors.date}
               required
             />

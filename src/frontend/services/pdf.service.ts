@@ -227,7 +227,7 @@ export class PDFService {
     const modal = document.createElement('div')
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
     modal.innerHTML = `
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 h-[90vh] flex flex-col">
         <div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Print Preview</h3>
           <div class="flex space-x-2">
@@ -239,10 +239,10 @@ export class PDFService {
             </button>
           </div>
         </div>
-        <div class="flex-1 p-4 overflow-hidden">
+        <div class="flex-1 min-h-0 p-4 overflow-hidden">
           <iframe 
-            src="${result.url}" 
-            class="w-full h-full border rounded"
+            src="${result.url}#toolbar=0" 
+            class="w-full h-full border rounded flex-1"
             title="PDF Preview"
           ></iframe>
         </div>
@@ -420,11 +420,20 @@ export class PDFService {
   private addHeader(pdf: jsPDF, options: Required<PDFOptions>, yPosition: number): number {
     const pageWidth = pdf.internal.pageSize.getWidth()
     
-    // Title
+    // Title with logo aligned together
+    const logoPath = '/images/vcrt_logo.png' // path from public
+    const logoSize = 8                       // square logo 
+    const x = options.margins.left
+    const y = yPosition                      // baseline for alignment
+
+    // Add logo
+    pdf.addImage(logoPath, 'PNG', x, y - logoSize + 3, logoSize, logoSize)
+
+    // Add text aligned with logo vertically
     pdf.setFontSize(12)
     pdf.setFont('helvetica', 'bold')
-    pdf.text('PATIENT CARE REPORT', pageWidth / 2, yPosition, { align: 'center' })
-    
+    pdf.text('Patient Care Report', x + logoSize + 3, y)
+
     // Timestamp
     pdf.setFontSize(7)
     pdf.setFont('helvetica', 'normal')
@@ -514,7 +523,7 @@ export class PDFService {
     yPosition = renderFieldsRow(
       pdf,
       [
-        { label: 'Paramedics Called by:', value: data.parademicsCalledBy || '' },
+        { label: 'Paramedics Called by:', value: data.paramedicsCalledBy || '' },
         { label: 'First Agency on Scene:', value: data.firstAgencyOnScene || '' },
       ],
       [2, 2], 
@@ -555,8 +564,8 @@ export class PDFService {
       pdf,
       [
         { label: 'Patient Name:', value: data.patientName || '' },
-        { label: 'DOB:', value: data.dob || '' },
-        { label: 'Age:', value: data.age ? data.age.toString() : '' },
+        { label: 'DOB:', value: data.dob || 'Not Recorded' },
+        { label: 'Age:', value: data.age ? data.age.toString() : 'Not Recorded' },
         { label: 'Sex:', value: data.sex || '' },
       ],
       [1, 1, 1, 1], 
@@ -570,7 +579,7 @@ export class PDFService {
       pdf,
       [
         { label: 'Status:', value: data.status || '' },
-        { label: 'Student/Employee #:', value: data.studentEmployeeNumber || '' },
+        { label: 'Student/Employee #:', value: data.studentEmployeeNumber || ' Not Recorded' },
         { label: 'Workplace Injury?:', value: data.workplaceInjury || '' },
       ],
       [1, 1, 1], 
@@ -583,7 +592,7 @@ export class PDFService {
     yPosition = renderFieldsRow(
       pdf,
       [
-        { label: 'Emergency Contact Name (and Relationship):', value: data.emergencyContactName || '' },
+        { label: 'Emergency Contact Name (Relationship):', value: data.emergencyContactName || '' },
         { label: 'Contacted?:', value: data.contacted || '' },
         { label: 'Contacted by:', value: data.contactedBy || '' },
       ],
@@ -593,7 +602,7 @@ export class PDFService {
       contentWidth
     )
 
-    return yPosition + 4
+    return yPosition
 
   }
 
@@ -641,11 +650,22 @@ export class PDFService {
     yPosition = renderMultilineBlock(
       pdf, `Last Meal:`, data.lastMeal || '', yPosition, options, contentWidth
     )
+    
+    pdf.setDrawColor(0)
+    pdf.setLineWidth(0.4)
+    pdf.line(
+      options.margins.left,
+      yPosition,
+      pdf.internal.pageSize.getWidth() - options.margins.right,
+      yPosition
+    )
+    yPosition += 6
+
     yPosition = renderMultilineBlock(
       pdf, `Rapid Body Survey Findings:`, data.bodySurvey || '', yPosition, options, contentWidth
     )
 
-    return yPosition + 4
+    return yPosition
   }
 
   /**
@@ -677,13 +697,13 @@ export class PDFService {
     const airwayManagement = Array.isArray(data.airwayManagement) && data.airwayManagement.length > 0
     ? data.airwayManagement.join(', ')
     : ''
-    yPosition = renderFieldsRow( pdf, [{ label: 'Airway Management:', value: airwayManagement || '' }], [4], yPosition, options, contentWidth )
+    yPosition = renderFieldsRow( pdf, [{ label: 'Airway Management:', value: airwayManagement || ' N/A' }], [4], yPosition, options, contentWidth )
     
     yPosition = renderFieldsRow(
       pdf,
       [
-        { label: 'CPR Time Started:', value: data.timeStarted || '' },
-        { label: 'CPR Number of Cycles:', value: data.numberOfCycles || '' },
+        { label: 'CPR Time Started:', value: data.timeStarted || ' N/A' },
+        { label: 'CPR Number of Cycles:', value: data.numberOfCycles || ' N/A' },
       ],
       [2, 2], 
       yPosition,
@@ -694,8 +714,8 @@ export class PDFService {
     yPosition = renderFieldsRow(
       pdf,
       [
-        { label: 'AED Number of Shocks:', value: data.numberOfShocks || '' },
-        { label: 'Shock Not Advised:', value: data.shockNotAdvised || '' },
+        { label: 'AED Number of Shocks:', value: data.numberOfShocks || ' N/A' },
+        { label: 'Shock Not Advised:', value: data.shockNotAdvised || ' N/A' },
       ],
       [2, 2], 
       yPosition,
@@ -712,9 +732,9 @@ export class PDFService {
     yPosition = renderFieldsRow( 
       pdf, 
       [
-        { label: 'Hemorrhage Control:', value: hemorrhageControl || '' },
-        { label: 'Tourniquet Time:', value: hasTourniquet ? (data.timeApplied || '') : '' },
-        { label: 'Turns:', value: hasTourniquet ? (String(data.numberOfTurns ?? '')) : '' },
+        { label: 'Hemorrhage Control:', value: hemorrhageControl || ' N/A' },
+        { label: 'Tourniquet Time:', value: hasTourniquet ? (data.timeApplied || '') : ' N/A' },
+        { label: 'Turns:', value: hasTourniquet ? (String(data.numberOfTurns ?? '')) : ' N/A' },
       ],
       [2, 1, 1], 
       yPosition, 
@@ -728,7 +748,7 @@ export class PDFService {
     yPosition = renderFieldsRow( 
       pdf, 
       [
-        { label: 'Immobilization:', value: immobilization || '' },
+        { label: 'Immobilization:', value: immobilization || ' N/A' },
         { label: 'Patient Position:', value: data.positionOfPatient || '' },
       ], 
       [2, 2], 
@@ -737,7 +757,7 @@ export class PDFService {
       contentWidth,
     )
 
-    return yPosition + 4
+    return yPosition
   }
 
   /**
@@ -752,8 +772,18 @@ export class PDFService {
     data: PCRFormData
   ): Promise<number> {
     try {
+      pdf.setDrawColor(0)
+      pdf.setLineWidth(0.4)
+      pdf.line(
+        options.margins.left,
+        yPosition,
+        pdf.internal.pageSize.getWidth() - options.margins.right,
+        yPosition
+      )
+      yPosition += 6
+
       pdf.setFont('helvetica', 'bold')
-      pdf.text('Pain Assessment', options.margins.left, yPosition)
+      pdf.text('Pain Assessment:', options.margins.left, yPosition)
 
       // Extract image data from canvas data
       let imageDataUrl = canvasData
@@ -856,7 +886,7 @@ export class PDFService {
     pdf.setFont('helvetica', 'bold')
     headers.forEach((header, i) => {
       const cellX = x0 + i * colWidth
-      pdf.text(header, cellX + 1, yPosition + 4)           // small padding
+      pdf.text(header, cellX + colWidth / 2, yPosition + 4, { align: 'center' }) 
     })
 
     // Outer header border
@@ -896,7 +926,7 @@ export class PDFService {
       // Cell text
       row.forEach((cell, i) => {
         const cellX = x0 + i * colWidth
-        pdf.text(String(cell), cellX + 1, yPosition + 4)   // padding inside cell
+        pdf.text(String(cell), cellX + colWidth / 2, yPosition + 4, { align: 'center' })
       })
 
       yPosition += rowHeight
@@ -941,8 +971,8 @@ export class PDFService {
         pdf,
         [
           { label: 'Saturation Target Range: ', value: oxygenProtocol?.saturation_range || '' },
-          { label: 'Initial SpO2 %: ', value: oxygenProtocol?.spo2 || '' },
-          { label: 'Initial SpO2 Acceptable: ', value: oxygenProtocol?.spo2_acceptable || '' },
+          { label: 'Initial SpO2 %:', value: oxygenProtocol?.spo2 || '' },
+          { label: 'Initial SpO2 Acceptable:', value: oxygenProtocol?.spo2_acceptable || '' },
         ],
         [2, 1, 1],
         yPosition,
@@ -955,8 +985,11 @@ export class PDFService {
     if (oxygenProtocol?.oxygen_given) {
       yPosition = renderFieldsRow(
         pdf,
-        [{ label: 'Oxygen Therapy Given?: ', value: oxygenProtocol.oxygen_given || '' },],
-        [4],
+        [
+          { label: 'Oxygen Therapy Given?: ', value: oxygenProtocol.oxygen_given || '' },
+          { label: 'Who Started Therapy: ', value: String(oxygenProtocol.whoStartedTherapy ?? ' N/A') },
+        ],
+        [2, 2],
         yPosition,
         options,
         contentWidth
@@ -999,8 +1032,8 @@ export class PDFService {
         yPosition = renderFieldsRow(
           pdf,
           [
-            { label: 'Initial Flow Rate (L/min):', value: oxygenProtocol?.flowRate || '' },
             { label: 'Delivery Device:', value: oxygenProtocol?.deliveryDevice || '' },
+            { label: 'Initial Flow Rate (L/min):', value: oxygenProtocol?.flowRate || '' },
           ],
           [2, 2],
           yPosition,
@@ -1065,7 +1098,7 @@ export class PDFService {
 			pdf.setFontSize(8)
 			pdf.setFont('helvetica', 'bold')
 			labels.forEach((label, r) => {
-				pdf.text(label, x0 + 1, yPosition + r * rowHeight + 4)
+				pdf.text(label, x0 + (labelColWidth / 2), yPosition + r * rowHeight + 4, { align: 'center' })
 			})
 
 			// data cells
@@ -1080,7 +1113,7 @@ export class PDFService {
 				colValues.forEach((cell, r) => {
 					const cellX = x0 + labelColWidth + c * dataColWidth
 					const cellY = yPosition + r * rowHeight
-					pdf.text(String(cell), cellX + 1, cellY + 4)
+					pdf.text(String(cell), cellX + (dataColWidth / 2), cellY + 4, { align: 'center' })
 				})
 			}
 
@@ -1092,89 +1125,101 @@ export class PDFService {
       if (hasEnd) {
         // Reason
         if (oxygenProtocol?.reasonForEndingTherapy) {
-          yPosition = renderFieldsRow(
+          yPosition = renderMultilineBlock(
             pdf,
-            [
-              { label: 'Reason for Ending Therapy:', value: oxygenProtocol.reasonForEndingTherapy },
-              { label: 'Who Started Therapy:', value: oxygenProtocol.whoStartedTherapy },
-            ],
-            [2, 2],
+            `Reason for Ending Therapy:`, oxygenProtocol.reasonForEndingTherapy || '',
             yPosition,
             options,
             contentWidth
           )
         }
       }
-      yPosition += 4
     }
     
-		pdf.setFont('helvetica', 'bold')
-		pdf.text('SpO2 Table:', options.margins.left, yPosition)
-		pdf.setFont('helvetica', 'normal')
-		yPosition += 4
+    const readings = (vitalSigns2 ?? []).filter(v => {
+      const s = (v?.spo2 ?? '');
+      return s !== null && s !== undefined && String(s).trim() !== '';
+    });
 
-		const labels = ['Time', 'SpO2'] // rows
-		const nRows = labels.length
-		const nDataCols = Math.max(1, (vitalSigns2?.length || 0))
+    if (readings.length > 0) {
+      pdf.setDrawColor(0)
+      pdf.setLineWidth(0.4)
+      pdf.line(
+        options.margins.left,
+        yPosition,
+        pdf.internal.pageSize.getWidth() - options.margins.right,
+        yPosition
+      )
+      yPosition += 6
+    }
 
-		const x0 = options.margins.left
-		const rowHeight = 6
-		const labelColWidth = Math.min(30, contentWidth * 0.25) // left header column
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('SpO2 Readings:', options.margins.left, yPosition)
+    pdf.setFont('helvetica', 'normal')
+    yPosition += 4
 
-		// columns take 1/8 width unless more than 8 entries, then fit all
-		const denom = Math.max(8, nDataCols)
-		const dataColWidth = (contentWidth - labelColWidth) / denom
-		const tableWidth = labelColWidth + nDataCols * dataColWidth
-		const tableHeight = nRows * rowHeight
+    const labels = ['Time', 'SpO2 (%)'] // rows
+    const nRows = labels.length
+    const nDataCols = Math.max(1, (vitalSigns2?.length || 0))
 
-		// Left header column background
-		pdf.setFillColor(220, 220, 220)
-		pdf.rect(x0, yPosition, labelColWidth, tableHeight, 'F')
+    const x0 = options.margins.left
+    const rowHeight = 6
+    const labelColWidth = Math.min(30, contentWidth * 0.25) // left header column
 
-		// Outer border (use actual used width)
-		pdf.setDrawColor(0)
-		pdf.rect(x0, yPosition, tableWidth, tableHeight)
+    // columns take 1/8 width unless more than 8 entries, then fit all
+    const denom = Math.max(8, nDataCols)
+    const dataColWidth = (contentWidth - labelColWidth) / denom
+    const tableWidth = labelColWidth + nDataCols * dataColWidth
+    const tableHeight = nRows * rowHeight
 
-		// *** BLACK vertical line after the labels column ***
-		const sepX = x0 + labelColWidth
-		pdf.line(sepX, yPosition, sepX, yPosition + tableHeight)
+    // Left header column background
+    pdf.setFillColor(220, 220, 220)
+    pdf.rect(x0, yPosition, labelColWidth, tableHeight, 'F')
 
-		// Vertical lines between data columns
-		for (let c = 1; c < nDataCols; c++) {
-			const vx = x0 + labelColWidth + c * dataColWidth
-			pdf.line(vx, yPosition, vx, yPosition + tableHeight)
-		}
+    // Outer border (use actual used width)
+    pdf.setDrawColor(0)
+    pdf.rect(x0, yPosition, tableWidth, tableHeight)
 
-		// Horizontal lines between rows
-		for (let r = 1; r < nRows; r++) {
-			const hy = yPosition + r * rowHeight
-			pdf.line(x0, hy, x0 + tableWidth, hy)
-		}
+    // *** BLACK vertical line after the labels column ***
+    const sepX = x0 + labelColWidth
+    pdf.line(sepX, yPosition, sepX, yPosition + tableHeight)
 
-		// Row labels (left header col)
-		pdf.setFontSize(8)
-		pdf.setFont('helvetica', 'bold')
-		labels.forEach((label, r) => {
-			pdf.text(label, x0 + 1, yPosition + r * rowHeight + 4)
-		})
+    // Vertical lines between data columns
+    for (let c = 1; c < nDataCols; c++) {
+      const vx = x0 + labelColWidth + c * dataColWidth
+      pdf.line(vx, yPosition, vx, yPosition + tableHeight)
+    }
 
-		// Data cells
-		pdf.setFont('helvetica', 'normal')
-		for (let c = 0; c < nDataCols; c++) {
-			const vital = vitalSigns2[c] || {}
-			const colValues = [
-				vital.time ?? '',
-				(vital.spo2 != null ? String(vital.spo2) : ''),
-			]
+    // Horizontal lines between rows
+    for (let r = 1; r < nRows; r++) {
+      const hy = yPosition + r * rowHeight
+      pdf.line(x0, hy, x0 + tableWidth, hy)
+    }
 
-			colValues.forEach((cell, r) => {
-				const cellX = x0 + labelColWidth + c * dataColWidth
-				const cellY = yPosition + r * rowHeight
-				pdf.text(String(cell), cellX + 1, cellY + 4) // padding
-			})
-		}
+    // Row labels (left header col)
+    pdf.setFontSize(8)
+    pdf.setFont('helvetica', 'bold')
+    labels.forEach((label, r) => {
+      pdf.text(label, x0 + (labelColWidth / 2), yPosition + r * rowHeight + 4, { align: 'center' })
+    })
 
-		yPosition += tableHeight + 4
+    // Data cells
+    pdf.setFont('helvetica', 'normal')
+    for (let c = 0; c < nDataCols; c++) {
+      const vital = vitalSigns2[c] || {}
+      const colValues = [
+        vital.time ?? '',
+        (vital.spo2 != null ? String(vital.spo2) : ''),
+      ]
+
+      colValues.forEach((cell, r) => {
+        const cellX = x0 + labelColWidth + c * dataColWidth
+        const cellY = yPosition + r * rowHeight
+        pdf.text(String(cell), cellX + (dataColWidth / 2), cellY + 4, { align: 'center' }) 
+      })
+    }
+
+    yPosition += tableHeight + 4
 
     return yPosition
   }
@@ -1212,7 +1257,7 @@ export class PDFService {
       (data.comments || '').trim(),
       yPosition,
       options,
-      boxWidth 
+      contentWidth
     );
     
     const boxHeight2 = 8
@@ -1275,7 +1320,7 @@ export class PDFService {
       (data.transferComments || '').trim(),
       yPosition,
       options,
-      contentWidth 
+      contentWidth
     );
 
     return yPosition + 4
