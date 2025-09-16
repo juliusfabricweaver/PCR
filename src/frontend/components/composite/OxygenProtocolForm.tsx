@@ -51,32 +51,20 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
   }
 
   const saturationOptions = [
-    { value: 'copd', label: 'COPD (88-92%)' },
-    { value: 'other', label: 'Other (95-100%)' },
+    { value: 'COPD (88-92%)', label: 'COPD (88-92%)' },
+    { value: 'Other (95-100%)', label: 'Other (95-100%)' },
   ]
 
   const deliveryDeviceOptions = [
-    { value: 'NC', label: 'Nasal Cannula (NC)' },
-    { value: 'NRB', label: 'Non-Rebreather Mask (NRB)' },
-    { value: 'BVM', label: 'Bag Valve Mask (BVM)' },
+    { value: 'Nasal Cannula (NC)', label: 'Nasal Cannula (NC)' },
+    { value: 'Non-Rebreather Mask (NRB)', label: 'Non-Rebreather Mask (NRB)' },
+    { value: 'Bag Valve Mask (BVM)', label: 'Bag Valve Mask (BVM)' },
   ]
 
   const whoStartedOptions = [
     { value: 'Protection', label: 'Protection Services' },
     { value: 'VCRT', label: 'VCRT' },
     { value: 'Lifeguard', label: 'Lifeguard' },
-  ]
-
-  const reasonOptions = [
-    'Respiratory distress',
-    'Low oxygen saturation',
-    'Chest pain',
-    'Shortness of breath',
-    'Altered mental status',
-    'Cardiac arrest',
-    'Trauma with respiratory compromise',
-    'Medical emergency',
-    'Other',
   ]
 
   return (
