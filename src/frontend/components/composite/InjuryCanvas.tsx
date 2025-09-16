@@ -51,7 +51,7 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
     ctx.clearRect(0, 0, width, height)
 
     // Fill background
-    ctx.fillStyle = '#f9fafb'
+    ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, width, height)
 
     // Draw background image if loaded

@@ -62,7 +62,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
   ]
 
   const whoStartedOptions = [
-    { value: 'Protection', label: 'Protection Services' },
+    { value: 'Protection Services', label: 'Protection Services' },
     { value: 'VCRT', label: 'VCRT' },
     { value: 'Lifeguard', label: 'Lifeguard' },
   ]
@@ -96,12 +96,12 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
           name="spo2_acceptable"
           label="Initial SpO₂ Acceptable?"
           options={[
-            { value: 'yes', label: 'Yes' },
-            { value: 'no', label: 'No' },
+            { value: 'Yes', label: 'Yes' },
+            { value: 'No', label: 'No' },
           ]}
           orientation="horizontal"
           value={data.spo2_acceptable}
-          onChange={(value) => handleFieldChange('spo2_acceptable', value as 'yes' | 'no')}
+          onChange={(value) => handleFieldChange('spo2_acceptable', value as 'Yes' | 'No')}
           error={errors.spo2_acceptable}
         />
       </FormSection>
@@ -111,16 +111,16 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
           name="oxygen_given"
           label="Oxygen Therapy Given?"
           options={[
-            { value: 'yes', label: 'Yes' },
-            { value: 'no', label: 'No' },
+            { value: 'Yes', label: 'Yes' },
+            { value: 'No', label: 'No' },
           ]}
           orientation="horizontal"
           value={data.oxygen_given}
-          onChange={(value) => handleFieldChange('oxygen_given', value as 'yes' | 'no')}
+          onChange={(value) => handleFieldChange('oxygen_given', value as 'Yes' | 'No')}
           error={errors.oxygen_given}
         />
         
-        {data.oxygen_given === 'yes' && (
+        {data.oxygen_given === 'Yes' && (
           <FormSection title="Reason for Oxygen Therapy">
             <Input
               label="Reason for O2 Therapy"
@@ -132,7 +132,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
           </FormSection>
         )}
 
-        {data.oxygen_given === 'yes' && (
+        {data.oxygen_given === 'Yes' && (
           <Card>
             <Card.Body>
               <div className="space-y-4">
@@ -184,7 +184,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
         )}
       </FormSection>
 
-      {data.oxygen_given === 'yes' && (
+      {data.oxygen_given === 'Yes' && (
         <>
           <FormSection title="Flow Rate Alterations">
             <div className="space-y-4">
@@ -258,7 +258,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                 label="Who Started Therapy"
                 options={whoStartedOptions}
                 value={data.whoStartedTherapy}
-                onChange={(value) => handleFieldChange('whoStartedTherapy', value as 'Protection' | 'VCRT' | 'Lifeguard')}
+                onChange={(value) => handleFieldChange('whoStartedTherapy', value as 'Protection Services' | 'VCRT' | 'Lifeguard')}
                 error={errors.whoStartedTherapy}
               />
             </div>
