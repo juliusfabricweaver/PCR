@@ -31,7 +31,7 @@ export class CleanupService {
       // Delete submitted PCR reports older than 24 hours
       const deleteQuery = `
         DELETE FROM pcr_reports
-        WHERE status = 'submitted'
+        WHERE status IN ('submitted','draft')
         AND datetime(created_at) < datetime('now', '-24 hours')
       `
 
