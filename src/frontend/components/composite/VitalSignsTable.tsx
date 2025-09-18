@@ -85,7 +85,9 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
               handleCellBlur()
             }
           }}
-          className="w-full border-0 px-2 py-1 bg-yellow-50 dark:bg-yellow-900/20 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          className="w-full border-0 px-2 py-1 bg-yellow-50 dark:bg-yellow-900/20 
+                    text-gray-900 dark:text-gray-300 
+                    focus:outline-none focus:ring-1 focus:ring-primary-500"
           autoFocus
         />
       )

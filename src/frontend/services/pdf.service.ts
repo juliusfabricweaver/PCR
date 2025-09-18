@@ -1244,7 +1244,7 @@ export class PDFService {
     pdf.setFillColor(100, 100, 100)
     pdf.rect(boxX, boxY, boxWidth, boxHeight, 'F')
     pdf.setTextColor(255, 255, 255)
-    pdf.text('CALL COMMENTS', boxX + 2, boxY + boxHeight - 3)
+    pdf.text('CALL DESCRIPTION', boxX + 2, boxY + boxHeight - 3)
     pdf.setTextColor(0, 0, 0)
     yPosition += boxHeight + 6
 
