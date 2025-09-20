@@ -225,12 +225,6 @@ const PCRPage: React.FC = () => {
     updateField('vitalSigns2', vitalSigns2)
   }
 
-  useEffect(() => {
-    autoFillCallDescription();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.responder1, data.responder2, data.responder3, data.timeNotified, data.location]);
-
-
   const calculateAgeFromDOB = (dob: string): number => {
     const birthDate = new Date(dob)
     const today = new Date()
@@ -268,26 +262,6 @@ const PCRPage: React.FC = () => {
       validateField('ageOrDob')
     }
   }
-
-  const autoFillCallDescription = () => {
-    const responders = [data.responder1, data.responder2, data.responder3]
-      .filter(v => (v ?? '').trim() !== '')
-      .join(', ')
-
-    const responderText = responders ? `VCRT responders (${responders})` : `VCRT responders`
-    const timeText = data.timeNotified ? ` at ${data.timeNotified}` : ''
-    const locationText = data.location ? ` in ${data.location}` : ''
-
-    const template = `${responderText} received a call${timeText}${locationText} for ...`
-
-    // Update if user hasn't typed their own text yet
-    const userHasTyped = !!data.comments && data.comments.trim() !== '' && data.comments !== lastAutoCommentsRef.current
-    if (!userHasTyped) {
-      updateField('comments', template)
-      lastAutoCommentsRef.current = template
-    }
-  }
-
 
   // Test function to fill sample data
   const fillSampleData = () => {

@@ -16,7 +16,7 @@ interface VitalSignsTableProps {
 const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
   data,
   onChange,
-  maxRows = 6,
+  maxRows = 8,
   title = 'Vital Signs',
   className,
   columns: customColumns,
