@@ -111,16 +111,16 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
           name="oxygen_given"
           label="Oxygen Therapy Given?"
           options={[
-            { value: 'Yes', label: 'Yes' },
-            { value: 'No', label: 'No' },
+            { value: 'yes', label: 'Yes' },
+            { value: 'no', label: 'No' },
           ]}
           orientation="horizontal"
           value={data.oxygen_given}
-          onChange={(value) => handleFieldChange('oxygen_given', value as 'Yes' | 'No')}
+          onChange={(value) => handleFieldChange('oxygen_given', value as 'yes' | 'no')}
           error={errors.oxygen_given}
         />
         
-        {data.oxygen_given === 'Yes' && (
+        {data.oxygen_given === 'yes' && (
           <FormSection title="Reason for Oxygen Therapy">
             <Input
               label="Reason for O2 Therapy"
@@ -132,7 +132,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
           </FormSection>
         )}
 
-        {data.oxygen_given === 'Yes' && (
+        {data.oxygen_given === 'yes' && (
           <Card>
             <Card.Body>
               <div className="space-y-4">
@@ -184,7 +184,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
         )}
       </FormSection>
 
-      {data.oxygen_given === 'Yes' && (
+      {data.oxygen_given === 'yes' && (
         <>
           <FormSection title="Flow Rate Alterations">
             <div className="space-y-4">

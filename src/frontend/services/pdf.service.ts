@@ -34,40 +34,78 @@ interface PDFGenerationResult {
   size: number
 }
 
+// Helper: ensures enough space on page
+const PAGE_GUARD = 6;
+function ensureSpaceFor(pdf: jsPDF, options: Required<PDFOptions>, y: number, needed: number) {
+  const pageH = pdf.internal.pageSize.getHeight()
+  const bottom = options.margins.bottom + PAGE_GUARD
+  if (y + needed > pageH - bottom) {
+    pdf.addPage()
+    return options.margins.top
+  }
+  return y
+}
+
 // Helper: render a row of fields with column spans
 function renderFieldsRow(
   pdf: jsPDF,
-  fields: { label: string; value: string }[],
+  fields: { label: string; value: string | number }[],
   spans: number[],
-  yPosition: number,
+  y: number,
   options: Required<PDFOptions>,
   contentWidth: number
 ): number {
   const colUnit = contentWidth / 4
   let x = options.margins.left
 
-  fields.forEach((field, i) => {
+  // compute line height in mm
+  const lineH = pdf.getLineHeightFactor() * (pdf.getFontSize() * 0.3528)
+  let neededLinesMax = 1
+
+  // First pass: measure how many lines each value will wrap to
+  const measured = fields.map((field, i) => {
     const span = spans[i] || 1
     const maxWidth = colUnit * span
-
-    // Bold label
     pdf.setFont('helvetica', 'bold')
-    pdf.text(field.label, x, yPosition)
+    const label = field.label ?? ''
+    const labelW = pdf.getTextWidth(label + ' ')
+    const valueMaxW = Math.max(4, maxWidth - labelW)
 
-    // Normal font for value
-    const labelWidth = pdf.getTextWidth(field.label + ' ')
+    const raw = String(field.value ?? '')
     pdf.setFont('helvetica', 'normal')
-    pdf.text(
-      (field.value || '').toString().substring(0, 50),
-      x + labelWidth,
-      yPosition,
-      { maxWidth: maxWidth - labelWidth }
-    )
+    const lines = pdf.splitTextToSize(raw, valueMaxW)
+    neededLinesMax = Math.max(neededLinesMax, Math.max(1, lines.length))
 
-    x += maxWidth
+    return { label, labelW, valueMaxW, lines, maxWidth }
   })
 
-  return yPosition + 4
+  // ensure page break if needed
+  const pageH = pdf.internal.pageSize.getHeight()
+  const bottom = options.margins.bottom
+  const neededHeight = neededLinesMax * lineH
+  if (y + neededHeight > pageH - bottom) {
+    pdf.addPage()
+    y = options.margins.top
+  }
+
+  // Second pass: draw
+  let xCursor = options.margins.left
+  measured.forEach((m, i) => {
+    // label
+    pdf.setFont('helvetica', 'bold')
+    pdf.text(m.label, xCursor, y)
+
+    // value
+    pdf.setFont('helvetica', 'normal')
+    const xVal = xCursor + m.labelW
+    m.lines.forEach((ln, idx) => {
+      pdf.text(ln, xVal, y + idx * lineH)
+    })
+
+    xCursor += m.maxWidth
+  })
+
+  return y + neededHeight + 1 // small spacer
 }
 
 	// Add this helper near renderFieldsRow
@@ -184,10 +222,6 @@ export class PDFService {
       if (data.vitalSigns?.length) {
         yPosition = this.addVitalSigns(pdf, data.vitalSigns, opts, yPosition, contentWidth)
       }
-
-      pdf.addPage()
-      yPosition = opts.margins.top
-      yPosition = this.addHeader(pdf, opts, yPosition)
 
       // Oxygen Protocol
       if (data.oxygenProtocol) {
@@ -510,7 +544,7 @@ export class PDFService {
       [
         { label: 'Time Notified:', value: data.timeNotified || '' },
         { label: 'On Scene:', value: data.onScene || '' },
-        { label: 'Transport Arrived:', value: data.transportArrived || '' },
+        { label: 'Transport Arrived:', value: data.transportArrived || 'N/A' },
         { label: 'Cleared:', value: data.clearedScene || '' },
       ],
       [1, 1, 1, 1], 
@@ -821,17 +855,17 @@ export class PDFService {
       // --- Render OPQRST on the LEFT half ---
       let yText = startY
       yText += 6
-      yText = renderFieldsRow(
-        pdf, [{ label: 'Onset:', value: data.onset || '' }], [4], yText, options, leftColWidth
+      yText = renderMultilineBlock(
+        pdf, 'Onset:', data.onset || '', yText, options, leftColWidth
       )
-      yText = renderFieldsRow(
-        pdf, [{ label: 'Provocation:', value: data.provocation || '' }], [4], yText, options, leftColWidth
+      yText = renderMultilineBlock(
+        pdf, 'Provocation:', data.provocation || '', yText, options, leftColWidth
       )
-      yText = renderFieldsRow(
-        pdf, [{ label: 'Quality:', value: data.quality || '' }], [4], yText, options, leftColWidth
+      yText = renderMultilineBlock(
+        pdf, 'Quality:', data.quality || '', yText, options, leftColWidth
       )
-      yText = renderFieldsRow(
-        pdf, [{ label: 'Radiation:', value: data.radiation || '' }], [4], yText, options, leftColWidth
+      yText = renderMultilineBlock(
+        pdf, 'Radiation:', data.radiation || '', yText, options, leftColWidth
       )
       yText = renderFieldsRow(
         pdf, [{ label: 'Scale:', value: data.scale || '' }], [4], yText, options, leftColWidth
@@ -850,7 +884,7 @@ export class PDFService {
   }
 
   /**
-   * Add vital signs table
+   * Add O2 Protocol
    */
   private addVitalSigns(
     pdf: jsPDF,
@@ -861,76 +895,106 @@ export class PDFService {
   ): number {
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
-    const boxHeight = 8
-    const boxX = options.margins.left
-    const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
-    const boxY = yPosition
-    pdf.setFillColor(100, 100, 100)
-    pdf.rect(boxX, boxY, boxWidth, boxHeight, 'F')
-    pdf.setTextColor(255, 255, 255)
-    pdf.text('VITAL SIGNS', boxX + 2, boxY + boxHeight - 3)
-    pdf.setTextColor(0, 0, 0)
-    yPosition += boxHeight + 6
+    const headerBarH = 8
+    const x0 = options.margins.left
+    const pageH = pdf.internal.pageSize.getHeight()
+    const bottom = options.margins.bottom
 
     const headers = ['Time', 'Pulse', 'Resp', 'B/P', 'LOC,GCS', 'Skin,Temp', 'Pupils']
     const nCols = headers.length
-    const colWidth = contentWidth / nCols
-    const rowHeight = 6
-    const x0 = options.margins.left
+    const colW = contentWidth / nCols
+    const cellPadX = 1.5
+    const lineH = pdf.getLineHeightFactor() * (pdf.getFontSize() * 0.3528)
 
-    // ----- Header row -----
-    pdf.setFillColor(220, 220, 220)
-    pdf.rect(x0, yPosition, contentWidth, rowHeight, 'F')   // header background
-
-    pdf.setFontSize(8)
-    pdf.setFont('helvetica', 'bold')
-    headers.forEach((header, i) => {
-      const cellX = x0 + i * colWidth
-      pdf.text(header, cellX + colWidth / 2, yPosition + 4, { align: 'center' }) 
-    })
-
-    // Outer header border
-    pdf.setDrawColor(0)
-    pdf.rect(x0, yPosition, contentWidth, rowHeight)
-
-    // Vertical column lines across header
-    for (let i = 1; i < nCols; i++) {
-      const vx = x0 + i * colWidth
-      pdf.line(vx, yPosition, vx, yPosition + rowHeight)
+    const drawSectionHeader = () => {
+      const boxX = x0
+      const boxW = contentWidth
+      const boxY = yPosition
+      pdf.setFillColor(100, 100, 100)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(9)
+      pdf.rect(boxX, boxY, boxW, headerBarH, 'F')
+      pdf.setTextColor(255, 255, 255)
+      pdf.text('VITAL SIGNS', boxX + 2, boxY + headerBarH - 3)
+      pdf.setTextColor(0, 0, 0)
+      yPosition += headerBarH + 4  
     }
 
-    yPosition += rowHeight
-
-    // ----- Data rows -----
-    pdf.setFont('helvetica', 'normal')
-    vitalSigns.forEach((vital) => {
-      const row = [
-        vital.time || '',
-        vital.pulse || '',
-        vital.resp || '',
-        vital.bp || '',
-        vital.loc || '',
-        vital.skin || '',
-        vital.pupils || '',
-      ]
-
-      // Row outer border
-      pdf.rect(x0, yPosition, contentWidth, rowHeight)
-
-      // Vertical lines for this row
+    const drawTableHeader = () => {
+      pdf.setFillColor(220, 220, 220)
+      const rowH = Math.max(6, lineH + 2)
+      pdf.rect(x0, yPosition, contentWidth, rowH, 'F')
+      pdf.setFontSize(8)
+      pdf.setFont('helvetica', 'bold')
+      for (let i = 0; i < nCols; i++) {
+        const cellX = x0 + i * colW
+        pdf.text(headers[i], cellX + colW / 2, yPosition + rowH - 2, { align: 'center' })
+      }
+      pdf.setDrawColor(0)
+      pdf.rect(x0, yPosition, contentWidth, rowH)
       for (let i = 1; i < nCols; i++) {
-        const vx = x0 + i * colWidth
-        pdf.line(vx, yPosition, vx, yPosition + rowHeight)
+        const vx = x0 + i * colW
+        pdf.line(vx, yPosition, vx, yPosition + rowH)
+      }
+      yPosition += rowH
+      pdf.setFont('helvetica', 'normal')
+    }
+
+    const ensureRoom = (need: number) => {
+      if (yPosition + need > pageH - bottom) {
+        pdf.addPage()
+        yPosition = options.margins.top
+        drawSectionHeader()
+        drawTableHeader()
+      }
+    }
+
+    drawSectionHeader()
+    drawTableHeader()
+
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(8)
+
+    for (const v of vitalSigns) {
+      const rowVals = [
+        v.time ?? '',
+        v.pulse ?? '',
+        v.resp ?? '',
+        v.bp ?? '',
+        v.loc ?? '',
+        v.skin ?? '',
+        v.pupils ?? '',
+      ].map(String)
+
+      const cellLines: string[][] = []
+      let rowLinesMax = 1
+      for (let i = 0; i < nCols; i++) {
+        const maxW = colW - 2 * cellPadX
+        const lines = pdf.splitTextToSize(rowVals[i], Math.max(4, maxW))
+        cellLines.push(lines)
+        rowLinesMax = Math.max(rowLinesMax, Math.max(1, lines.length))
       }
 
-      // Cell text
-      row.forEach((cell, i) => {
-        const cellX = x0 + i * colWidth
-        pdf.text(String(cell), cellX + colWidth / 2, yPosition + 4, { align: 'center' })
-      })
+      const rowH = rowLinesMax * lineH + 2
+      ensureRoom(rowH)
 
-      yPosition += rowHeight
-    })
+      pdf.rect(x0, yPosition, contentWidth, rowH)
+      for (let i = 1; i < nCols; i++) {
+        const vx = x0 + i * colW
+        pdf.line(vx, yPosition, vx, yPosition + rowH)
+      }
+
+      for (let i = 0; i < nCols; i++) {
+        const cellCX = x0 + i * colW + colW / 2   
+        const startY = yPosition + lineH         
+        const lines = cellLines[i]
+        for (let k = 0; k < lines.length; k++) {
+          pdf.text(lines[k], cellCX, startY + k * lineH, { align: 'center' })
+        }
+      }
+
+      yPosition += rowH
+    }
 
     return yPosition + 4
   }
@@ -946,10 +1010,10 @@ export class PDFService {
     yPosition: number,
     contentWidth: number
   ): number {
-    // Header bar
+    const boxHeight = 8
+    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight + 6)
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
-    const boxHeight = 8
     const boxX = options.margins.left
     const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
     const boxY = yPosition
@@ -1235,9 +1299,10 @@ export class PDFService {
     yPosition: number,
     contentWidth: number
   ): number {
+    const boxHeight = 8
+    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight + 6)
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
-    const boxHeight = 8
     const boxX = options.margins.left
     const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
     const boxY = yPosition
@@ -1261,6 +1326,7 @@ export class PDFService {
     );
     
     const boxHeight2 = 8
+    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight2 + 6)
     const boxX2 = options.margins.left
     const boxWidth2 = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
     const boxY2 = yPosition
@@ -1335,81 +1401,87 @@ export class PDFService {
     data: PCRFormData,
     options: Required<PDFOptions>,
     yPosition: number,
-    contentWidth: number
   ): number {
-    const pageWidth = pdf.internal.pageSize.getWidth()
-    const pageHeight = pdf.internal.pageSize.getHeight()
+    const pageW = pdf.internal.pageSize.getWidth()
+    const pageH = pdf.internal.pageSize.getHeight()
 
-    // --- layout constants (tweak to taste) ---
-    const stripHeight = 32            // a bit taller for names
+    // Layout
+    const stripHeight = 32
     const labelGap = 4
     const boxHeight = 14
     const boxPadX = 3
     const topLineGap = 4
-    const titles = ['Supervisor', 'Responder 1', 'Responder 2', 'Responder 3']
-    const names = [
-      data.supervisor || '',
-      data.responder1 || '',
-      data.responder2 || '',
-      data.responder3 || '',
-    ]
 
     const bottom = options.margins.bottom
+    const x0 = options.margins.left
+    const x1 = pageW - options.margins.right
 
-    // If current yPosition would collide with the strip, add new page
-    const stripTopY = pageHeight - bottom - stripHeight
+    // Page collision check
+    const stripTopY = pageH - bottom - stripHeight
     if (yPosition > stripTopY - topLineGap) {
       pdf.addPage()
     }
 
-    const pageW = pdf.internal.pageSize.getWidth()
-    const pageH = pdf.internal.pageSize.getHeight()
-    const x0 = options.margins.left
-    const x1 = pageW - options.margins.right
     const sigTopY = pageH - options.margins.bottom - stripHeight
     const sigBottomY = pageH - options.margins.bottom
 
-    // Separator line above the strip
+    // Separator line above strip
     pdf.setDrawColor(0)
     pdf.setLineWidth(0.4)
     pdf.line(x0, sigTopY - 2, x1, sigTopY - 2)
 
+    // Always 4 equal quarters
     const totalWidth = x1 - x0
     const colW = totalWidth / 4
 
+    const titles = ['Supervisor', 'Responder 1', 'Responder 2', 'Responder 3']
+    const names  = [
+      data.supervisor ?? '',
+      data.responder1 ?? '',
+      data.responder2 ?? '',
+      data.responder3 ?? '',
+    ]
+
     const labelY = sigTopY + 4
-    const nameY = labelY + 4
-    const boxY = nameY + labelGap
+    const nameY  = labelY + 4
+    const boxY   = nameY + labelGap
 
     for (let i = 0; i < 4; i++) {
       const colX = x0 + i * colW
       const boxX = colX + boxPadX
       const boxW = colW - 2 * boxPadX
 
-      // Label (bold)
+      const title = titles[i]
+      const name  = names[i]
+
+      // Draw logic:
+      // - Supervisor column always drawn
+      // - Responder columns drawn only if name present
+      const shouldDraw = i === 0 || (name && String(name).trim() !== '')
+      if (!shouldDraw) continue
+
+      // Title
       pdf.setFont('helvetica', 'bold')
       pdf.setFontSize(8)
       pdf.setTextColor(0, 0, 0)
-      pdf.text(titles[i], colX + colW / 2, labelY, { align: 'center' })
+      pdf.text(title, colX + colW / 2, labelY, { align: 'center' })
 
-      // Name (non-bold, smaller, gray)
-      if (names[i]) {
+      // Name (if provided)
+      if (name) {
         pdf.setFont('helvetica', 'normal')
         pdf.setFontSize(8)
-        pdf.setTextColor(0, 0, 0)
-        pdf.text(names[i], colX + colW / 2, nameY, { align: 'center' })
+        pdf.text(String(name), colX + colW / 2, nameY, { align: 'center' })
       }
 
-      // Signature box (super light gray fill, light gray border)
-      pdf.setFillColor(230, 230, 230)   // almost white
-      pdf.setDrawColor(200, 200, 200)   // light outline
+      // Signature box
+      pdf.setFillColor(230, 230, 230)
+      pdf.setDrawColor(200, 200, 200)
       pdf.setLineWidth(0.2)
       pdf.rect(boxX, boxY, boxW, boxHeight, 'FD')
     }
 
     return sigBottomY
   }
-
 
   /**
    * Generate filename for PDF
