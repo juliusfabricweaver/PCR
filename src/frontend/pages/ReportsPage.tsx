@@ -89,13 +89,27 @@ const ReportsPage = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      timeZone: 'America/Toronto',
+      timeZone: 'Etc/GMT+3',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  const formatReportId = (dateString: string) => {
+    const date = new Date(
+      new Date(dateString).toLocaleString('en-US', { timeZone: 'Etc/GMT+3' })
+    )
+
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+
+    return `pcr_${year}${month}${day}_${hours}${minutes}`
   }
 
   if (loading) {
@@ -181,8 +195,9 @@ const ReportsPage = () => {
                       onClick={report.status === 'submitted' ? () => handleViewReport(report.id) : undefined}
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {report.id}
+                        {formatReportId(report.created_at)}
                       </td>
+
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

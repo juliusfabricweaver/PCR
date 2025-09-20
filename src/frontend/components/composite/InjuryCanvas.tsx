@@ -252,7 +252,9 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
             {colors.map((color) => (
               <Tooltip key={color.value} content={`${color.name} - ${color.description}`}>
                 <button
-                  onClick={() => handleColorChange(color.value)}
+                  type="button"                                   // <-- add this
+                  onClick={(e) => { e.preventDefault(); handleColorChange(color.value); }} // optional safety
+                  aria-label={`Select ${color.name} (${color.description})`}
                   className={cn(
                     'w-8 h-8 rounded-full border-2 transition-all',
                     brushColor === color.value
@@ -261,6 +263,7 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
                   )}
                   style={{ backgroundColor: color.value }}
                 />
+
               </Tooltip>
             ))}
           </div>
@@ -281,17 +284,7 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="flex space-x-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setDrawingMode(drawingMode === 'pen' ? 'eraser' : 'pen')}
-            leftIcon={<Eraser className="w-4 h-4" />}
-          >
-            {drawingMode === 'pen' ? 'Eraser' : 'Pen'}
-          </Button>
-          
+        <div className="flex space-x-2">  
           <Button
             type="button"
             variant="outline"
@@ -301,21 +294,11 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
           >
             Clear
           </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleDownload}
-            leftIcon={<Download className="w-4 h-4" />}
-          >
-            Download
-          </Button>
         </div>
       </div>
 
       {/* Canvas */}
-      <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+      <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden flex justify-center items-center">
         <canvas
           ref={canvasRef}
           width={width}

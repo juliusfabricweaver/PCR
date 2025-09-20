@@ -1244,7 +1244,7 @@ export class PDFService {
     pdf.setFillColor(100, 100, 100)
     pdf.rect(boxX, boxY, boxWidth, boxHeight, 'F')
     pdf.setTextColor(255, 255, 255)
-    pdf.text('CALL COMMENTS', boxX + 2, boxY + boxHeight - 3)
+    pdf.text('CALL DESCRIPTION', boxX + 2, boxY + boxHeight - 3)
     pdf.setTextColor(0, 0, 0)
     yPosition += boxHeight + 6
 
@@ -1277,7 +1277,7 @@ export class PDFService {
     pdf.setFont('helvetica', 'normal')
 
     const transferFields: { label: string; value: string }[] = [
-      { label: 'Patient Care Transferred: ', value: data.patientCareTransferred || '' },
+      { label: 'Patient Care Transferred To: ', value: data.patientCareTransferred || '' },
     ]
 
     let spans: number[] = [2, 2]
@@ -1327,7 +1327,8 @@ export class PDFService {
   }
 
   /**
-   * To delete
+   * Signatures + footer strip pinned to the very bottom of the page.
+   * It reserves a fixed-height area above the bottom margin, regardless of current y.
    */
   private addSignaturesAndFooter(
     pdf: jsPDF,
@@ -1336,9 +1337,79 @@ export class PDFService {
     yPosition: number,
     contentWidth: number
   ): number {
-    pdf.setFontSize(9)
-    pdf.setFont('helvetica', 'bold')
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+
+    // --- layout constants (tweak to taste) ---
+    const stripHeight = 32            // a bit taller for names
+    const labelGap = 4
+    const boxHeight = 14
+    const boxPadX = 3
+    const topLineGap = 4
+    const titles = ['Supervisor', 'Responder 1', 'Responder 2', 'Responder 3']
+    const names = [
+      data.supervisor || '',
+      data.responder1 || '',
+      data.responder2 || '',
+      data.responder3 || '',
+    ]
+
+    const bottom = options.margins.bottom
+
+    // If current yPosition would collide with the strip, add new page
+    const stripTopY = pageHeight - bottom - stripHeight
+    if (yPosition > stripTopY - topLineGap) {
+      pdf.addPage()
+    }
+
+    const pageW = pdf.internal.pageSize.getWidth()
+    const pageH = pdf.internal.pageSize.getHeight()
+    const x0 = options.margins.left
+    const x1 = pageW - options.margins.right
+    const sigTopY = pageH - options.margins.bottom - stripHeight
+    const sigBottomY = pageH - options.margins.bottom
+
+    // Separator line above the strip
+    pdf.setDrawColor(0)
+    pdf.setLineWidth(0.4)
+    pdf.line(x0, sigTopY - 2, x1, sigTopY - 2)
+
+    const totalWidth = x1 - x0
+    const colW = totalWidth / 4
+
+    const labelY = sigTopY + 4
+    const nameY = labelY + 4
+    const boxY = nameY + labelGap
+
+    for (let i = 0; i < 4; i++) {
+      const colX = x0 + i * colW
+      const boxX = colX + boxPadX
+      const boxW = colW - 2 * boxPadX
+
+      // Label (bold)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(8)
+      pdf.setTextColor(0, 0, 0)
+      pdf.text(titles[i], colX + colW / 2, labelY, { align: 'center' })
+
+      // Name (non-bold, smaller, gray)
+      if (names[i]) {
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(8)
+        pdf.setTextColor(0, 0, 0)
+        pdf.text(names[i], colX + colW / 2, nameY, { align: 'center' })
+      }
+
+      // Signature box (super light gray fill, light gray border)
+      pdf.setFillColor(230, 230, 230)   // almost white
+      pdf.setDrawColor(200, 200, 200)   // light outline
+      pdf.setLineWidth(0.2)
+      pdf.rect(boxX, boxY, boxW, boxHeight, 'FD')
+    }
+
+    return sigBottomY
   }
+
 
   /**
    * Generate filename for PDF

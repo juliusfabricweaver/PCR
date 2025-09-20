@@ -1,8 +1,12 @@
 import React, { forwardRef } from 'react'
 import { cn } from '@/utils'
-import type { InputProps } from '@/types'
+import type { InputProps as BaseInputProps } from '@/types'
 
-const Input = forwardRef<HTMLInputElement, InputProps>(({
+type OurInputProps = BaseInputProps & {
+  requireUnknown?: boolean
+}
+
+const Input = forwardRef<HTMLInputElement, OurInputProps>(({
   label,
   error,
   helpText,
@@ -10,9 +14,24 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
   rightIcon,
   className,
   required,
+  requireUnknown,
   ...props
 }, ref) => {
   const inputId = props.id || `input-${Math.random().toString(36).substr(2, 9)}`
+
+  const handleInvalid: React.FormEventHandler<HTMLInputElement> = (e) => {
+    if (requireUnknown) {
+      e.currentTarget.setCustomValidity('Please fill in (use DNO or UTO if unknown)')
+    }
+    // if you already passed an onInvalid via props, call it too
+    if (props.onInvalid) props.onInvalid(e)
+  }
+
+  const handleInput: React.FormEventHandler<HTMLInputElement> = (e) => {
+    // clear as soon as user types
+    e.currentTarget.setCustomValidity('')
+    if (props.onInput) props.onInput(e)
+  }
 
   return (
     <div className="space-y-1">
@@ -46,7 +65,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
           aria-describedby={
             error ? `${inputId}-error` : helpText ? `${inputId}-help` : undefined
           }
-          required={required}
+          required={required || requireUnknown}     // <— make it required if requireUnknown is set
+          onInvalid={handleInvalid}                 // <— NEW
+          onInput={handleInput}                     // <— NEW
           {...props}
         />
         

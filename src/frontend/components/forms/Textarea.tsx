@@ -6,6 +6,8 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   error?: string
   helpText?: string
   resize?: 'none' | 'both' | 'horizontal' | 'vertical'
+  /** Treat as required and, if empty, show a custom message suggesting DNO/UTO when unknown */
+  requireUnknown?: boolean
 }
 
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
@@ -15,10 +17,14 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
   resize = 'vertical',
   className,
   required,
+  requireUnknown,
+  id,
+  onInvalid,
+  onInput,
   ...props
 }, ref) => {
-  const textareaId = props.id || `textarea-${Math.random().toString(36).substr(2, 9)}`
-  
+  const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`
+
   const resizeClasses = {
     none: 'resize-none',
     both: 'resize',
@@ -26,12 +32,26 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
     vertical: 'resize-y',
   }
 
+  const handleInvalid: React.FormEventHandler<HTMLTextAreaElement> = (e) => {
+    if (requireUnknown) {
+      e.currentTarget.setCustomValidity('Please fill in (use DNO or UTO if unknown)')
+    }
+    if (onInvalid) onInvalid(e)
+  }
+
+  const handleInput: React.FormEventHandler<HTMLTextAreaElement> = (e) => {
+    e.currentTarget.setCustomValidity('')
+    if (onInput) onInput(e)
+  }
+
+  const isRequired = required || requireUnknown
+
   return (
     <div className="space-y-1">
       {label && (
         <label
           htmlFor={textareaId}
-          className={cn('form-label', required && 'form-label-required')}
+          className={cn('form-label', isRequired && 'form-label-required')}
         >
           {label}
         </label>
@@ -50,7 +70,9 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
         aria-describedby={
           error ? `${textareaId}-error` : helpText ? `${textareaId}-help` : undefined
         }
-        required={required}
+        required={isRequired}
+        onInvalid={handleInvalid}
+        onInput={handleInput}
         {...props}
       />
       
