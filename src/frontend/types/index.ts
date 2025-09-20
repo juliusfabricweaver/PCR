@@ -119,7 +119,6 @@ export interface PCRFormData extends BasicInformation, PatientInformation, Medic
 export interface User {
   id: string;
   username: string;
-  email: string;
   role: 'admin' | 'user' | 'supervisor';
   firstName: string;
   lastName: string;

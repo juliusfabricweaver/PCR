@@ -87,6 +87,36 @@ const ReportsPage = () => {
     window.location.href = `/pcr/new?${params.toString()}`
   }
 
+  const handleDeleteReport = async (reportId: string, status: string) => {
+    const what = status === 'draft' ? 'this draft' : 'this submission'
+    const ok = window.confirm(`Delete ${what}? This cannot be undone.`)
+    if (!ok) return
+
+    try {
+      if (!token) {
+        setError('Authentication required')
+        return
+      }
+
+      const res = await fetch(`/api/pcr/${reportId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body?.message || 'Failed to delete report')
+
+      // Optimistic UI: remove from state
+      setReports(prev => prev.filter(r => r.id !== reportId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete report')
+      console.error('Error deleting report:', err)
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       timeZone: 'Etc/GMT+3',
@@ -182,7 +212,7 @@ const ReportsPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Last Updated
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -222,19 +252,13 @@ const ReportsPage = () => {
                           {report.status === 'draft' ? (
                             <>
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleEditDraft(report.id)
-                                }}
+                                onClick={(e) => { e.stopPropagation(); handleEditDraft(report.id) }}
                                 className="text-blue-600 hover:text-blue-900 font-medium"
                               >
                                 Edit Draft
                               </button>
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleViewReport(report.id)
-                                }}
+                                onClick={(e) => { e.stopPropagation(); handleViewReport(report.id) }}
                                 className="text-green-600 hover:text-green-900 font-medium"
                               >
                                 Preview
@@ -242,15 +266,21 @@ const ReportsPage = () => {
                             </>
                           ) : (
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleViewReport(report.id)
-                              }}
+                              onClick={(e) => { e.stopPropagation(); handleViewReport(report.id) }}
                               className="text-blue-600 hover:text-blue-900 font-medium"
                             >
                               View PDF
                             </button>
                           )}
+
+                          {/* Delete (works for both draft and submitted) */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id, report.status) }}
+                            className="text-red-600 hover:text-red-800 font-medium"
+
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>

@@ -209,7 +209,7 @@ Based on `form_inputs.md`, the form includes:
 
 ### Form Validation
 - **Required Fields**: 15+ required fields clearly marked
-- **Format Validation**: Time (HH:MM), dates, numbers, email
+- **Format Validation**: Time (HH:MM), dates, numbers
 - **Real-time Feedback**: Instant validation with error messages
 - **Progress Tracking**: Visual completion indicators
 
