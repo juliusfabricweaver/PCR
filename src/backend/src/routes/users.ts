@@ -14,13 +14,13 @@ function generateId(): string {
 // POST /api/users - Create new user (admin only)
 router.post('/', authenticateToken, requireRole(['admin']), logActivity('create_user', 'user'), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { username, password, email, firstName, lastName, role = 'user' } = req.body;
+    const { username, password, firstName, lastName, role = 'user' } = req.body;
 
     // Validate required fields
-    if (!username || !password || !email || !firstName || !lastName) {
+    if (!username || !password || !firstName || !lastName) {
       return res.status(400).json({
         success: false,
-        message: 'Username, password, email, first name, and last name are required'
+        message: 'Username, password, first name, and last name are required'
       });
     }
 
@@ -30,15 +30,6 @@ router.post('/', authenticateToken, requireRole(['admin']), logActivity('create_
       return res.status(400).json({
         success: false,
         message: 'Username already exists'
-      });
-    }
-
-    // Check if email already exists
-    const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
-    if (existingEmail) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email already exists'
       });
     }
 
@@ -58,20 +49,19 @@ router.post('/', authenticateToken, requireRole(['admin']), logActivity('create_
 
     // Insert new user
     db.prepare(`
-      INSERT INTO users (id, username, password_hash, email, first_name, last_name, role, is_active, created_at, updated_at)
+      INSERT INTO users (id, username, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `).run(userId, username, passwordHash, email, firstName, lastName, role);
+    `).run(userId, username, '', passwordHash, firstName, lastName, role);
 
     // Get created user
     const newUser = db.prepare(`
-      SELECT id, username, email, first_name, last_name, role, is_active, created_at
+      SELECT id, username, first_name, last_name, role, is_active, created_at
       FROM users WHERE id = ?
     `).get(userId);
 
     const userData = {
       id: newUser.id,
       username: newUser.username,
-      email: newUser.email,
       firstName: newUser.first_name,
       lastName: newUser.last_name,
       role: newUser.role,
@@ -97,7 +87,7 @@ router.get('/', authenticateToken, requireRole(['admin']), (req: AuthenticatedRe
   try {
     const { limit = 50, offset = 0, active } = req.query;
 
-    let query = 'SELECT id, username, email, first_name, last_name, role, is_active, created_at, last_login FROM users';
+    let query = 'SELECT id, username, first_name, last_name, role, is_active, created_at, last_login FROM users';
     const params: any[] = [];
 
     if (active !== undefined) {
@@ -114,7 +104,6 @@ router.get('/', authenticateToken, requireRole(['admin']), (req: AuthenticatedRe
     const transformedUsers = users.map(user => ({
       id: user.id,
       username: user.username,
-      email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
       role: user.role,
@@ -145,7 +134,7 @@ router.get('/:id', authenticateToken, (req: AuthenticatedRequest, res: Response)
     }
 
     const user = db.prepare(`
-      SELECT id, username, email, first_name, last_name, role, is_active, created_at, last_login
+      SELECT id, username, first_name, last_name, role, is_active, created_at, last_login
       FROM users WHERE id = ?
     `).get(id);
 
@@ -156,7 +145,6 @@ router.get('/:id', authenticateToken, (req: AuthenticatedRequest, res: Response)
     const userData = {
       id: user.id,
       username: user.username,
-      email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
       role: user.role,
@@ -180,7 +168,7 @@ router.get('/:id', authenticateToken, (req: AuthenticatedRequest, res: Response)
 router.put('/:id', authenticateToken, logActivity('update_user', 'user'), (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { firstName, lastName, email, role, isActive } = req.body;
+    const { firstName, lastName, role, isActive } = req.body;
 
     // Users can only update their own profile unless they're admin
     if (req.user!.role !== 'admin' && req.user!.id !== id) {
@@ -206,11 +194,6 @@ router.put('/:id', authenticateToken, logActivity('update_user', 'user'), (req: 
     if (lastName) {
       updateFields.push('last_name = ?');
       updateValues.push(lastName);
-    }
-
-    if (email) {
-      updateFields.push('email = ?');
-      updateValues.push(email);
     }
 
     // Only admin can update role and active status
@@ -242,14 +225,13 @@ router.put('/:id', authenticateToken, logActivity('update_user', 'user'), (req: 
 
     // Get updated user
     const updatedUser = db.prepare(`
-      SELECT id, username, email, first_name, last_name, role, is_active, created_at, updated_at, last_login
+      SELECT id, username, first_name, last_name, role, is_active, created_at, updated_at, last_login
       FROM users WHERE id = ?
     `).get(id);
 
     const userData = {
       id: updatedUser.id,
       username: updatedUser.username,
-      email: updatedUser.email,
       firstName: updatedUser.first_name,
       lastName: updatedUser.last_name,
       role: updatedUser.role,
@@ -269,6 +251,73 @@ router.put('/:id', authenticateToken, logActivity('update_user', 'user'), (req: 
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
+
+// DELETE /api/users/:id - Delete user (admin only; cannot delete admins or yourself)
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRole(['admin']),
+  logActivity('delete_user', 'user'),
+  (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      // You can't delete yourself
+      if (req.user!.id === id) {
+        return res.status(400).json({ success: false, message: "You can't delete your own account." });
+      }
+
+      // Fetch target
+      const target = db
+        .prepare('SELECT id, username, role FROM users WHERE id = ?')
+        .get(id);
+
+      if (!target) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      // Do not allow deleting admins (or at least the last admin)
+      if (String(target.role).toLowerCase() === 'admin') {
+        // If you want to allow deleting admins except the last one, use this block:
+        const adminCount = db
+          .prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'admin'")
+          .get().c as number;
+
+        if (adminCount <= 1) {
+          return res.status(400).json({ success: false, message: 'Cannot delete the last admin user.' });
+        }
+
+        // If you want to strictly forbid deleting any admin at all, use:
+        // return res.status(400).json({ success: false, message: 'Cannot delete an admin user.' });
+      }
+
+      // Attempt hard delete
+      try {
+        const result = db.prepare('DELETE FROM users WHERE id = ?').run(id);
+        if (result.changes === 0) {
+          return res.status(404).json({ success: false, message: 'User not found' });
+        }
+      } catch (err: any) {
+        // Foreign key constraint? e.g., user referenced elsewhere (PCRs, etc.)
+        const msg = String(err?.message || '');
+        if (msg.includes('FOREIGN KEY')) {
+          return res.status(409).json({
+            success: false,
+            message:
+              'Cannot delete this user because there are related records. Remove or reassign related records and try again.',
+          });
+        }
+        throw err;
+      }
+
+      return res.json({ success: true, message: 'User deleted' });
+    } catch (error) {
+      console.error('Delete user error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+);
+
 
 // POST /api/users/:id/change-password - Change user password
 router.post('/:id/change-password', authenticateToken, logActivity('change_password', 'user'), async (req: AuthenticatedRequest, res: Response) => {

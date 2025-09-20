@@ -17,7 +17,7 @@ async function createDefaultUsers() {
       const adminPasswordHash = await bcrypt.hash('admin', 10);
 
       db.prepare(`
-        INSERT INTO users (id, username, email, password_hash, first_name, last_name, role, is_active)
+        INSERT INTO users (id, username, password_hash, first_name, last_name, role, is_active)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         generateId('user'),
@@ -42,7 +42,7 @@ async function createDefaultUsers() {
       const userPasswordHash = await bcrypt.hash('user', 10);
 
       db.prepare(`
-        INSERT INTO users (id, username, email, password_hash, first_name, last_name, role, is_active)
+        INSERT INTO users (id, username, password_hash, first_name, last_name, role, is_active)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         generateId('user'),

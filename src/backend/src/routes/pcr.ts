@@ -159,33 +159,37 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
   }
 });
 
-// DELETE /api/pcr/:id - Delete PCR report (only drafts)
+// DELETE /api/pcr/:id - Delete PCR report (drafts and submissions)
 router.delete('/:id', authenticateToken, logActivity('delete_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Check if report exists, belongs to user, and is a draft
-    const existingReport = db.prepare(`
-      SELECT id, status FROM pcr_reports
-      WHERE id = ? AND created_by = ?
-    `).get(id, req.user!.id);
+    // Load report (don’t filter by created_by here so admins can act too)
+    const report = db.prepare(`
+      SELECT id, status, created_by
+      FROM pcr_reports
+      WHERE id = ?
+    `).get(id);
 
-    if (!existingReport) {
+    if (!report) {
       return res.status(404).json({ success: false, message: 'PCR report not found' });
     }
 
-    if (existingReport.status !== 'draft') {
-      return res.status(403).json({ success: false, message: 'Only draft reports can be deleted' });
+    const isOwner = report.created_by === req.user!.id;
+    const isAdmin = req.user!.role === 'admin';
+
+    // Allow: owner or admin
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Delete report
+    // If there are child rows, delete them first or ensure FK ON DELETE CASCADE
     db.prepare('DELETE FROM pcr_reports WHERE id = ?').run(id);
 
-    res.json({ success: true, message: 'PCR report deleted' });
-
+    return res.json({ success: true, message: 'PCR report deleted' });
   } catch (error) {
     console.error('Delete PCR report error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 

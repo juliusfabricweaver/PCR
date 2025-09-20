@@ -168,7 +168,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const user: User = {
         id: userData.id,
         username: userData.username,
-        email: userData.email,
         role: userData.role,
         firstName: userData.firstName,
         lastName: userData.lastName,

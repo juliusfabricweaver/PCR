@@ -78,7 +78,6 @@ router.post('/login', async (req: Request, res: Response) => {
     const userData = {
       id: user.id,
       username: user.username,
-      email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
       role: user.role,
@@ -116,7 +115,7 @@ router.get('/profile', authenticateToken, (req: AuthenticatedRequest, res: Respo
     }
 
     // Get fresh user data
-    const user = db.prepare('SELECT id, username, email, first_name, last_name, role, is_active, created_at, last_login FROM users WHERE id = ?').get(req.user.id) as any;
+    const user = db.prepare('SELECT id, username, first_name, last_name, role, is_active, created_at, last_login FROM users WHERE id = ?').get(req.user.id) as any;
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -125,7 +124,6 @@ router.get('/profile', authenticateToken, (req: AuthenticatedRequest, res: Respo
     const userData = {
       id: user.id,
       username: user.username,
-      email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
       role: user.role,
@@ -153,14 +151,14 @@ router.post('/register', authenticateToken, async (req: AuthenticatedRequest, re
       return res.status(403).json({ success: false, message: 'Admin access required' });
     }
 
-    const { username, email, password, firstName, lastName, role = 'user' } = req.body;
+    const { username, password, firstName, lastName, role = 'user' } = req.body;
 
-    if (!username || !email || !password || !firstName || !lastName) {
+    if (!username || !password || !firstName || !lastName) {
       return res.status(400).json({ success: false, message: 'All fields required' });
     }
 
     // Check if user already exists
-    const existingUser = db.prepare('SELECT id FROM users WHERE username = ? OR email = ?').get(username, email) as any;
+    const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username) as any;
 
     if (existingUser) {
       return res.status(409).json({ success: false, message: 'User already exists' });
@@ -172,16 +170,15 @@ router.post('/register', authenticateToken, async (req: AuthenticatedRequest, re
     // Create user
     const userId = generateId();
     db.prepare(`
-      INSERT INTO users (id, username, email, password_hash, first_name, last_name, role)
+      INSERT INTO users (id, username, password_hash, first_name, last_name, role)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(userId, username, email, passwordHash, firstName, lastName, role);
+    `).run(userId, username, passwordHash, firstName, lastName, role);
 
     res.json({
       success: true,
       data: {
         id: userId,
         username,
-        email,
         firstName,
         lastName,
         role

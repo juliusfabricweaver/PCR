@@ -16,7 +16,6 @@ interface CreateUserForm {
 interface EditUserForm {
   firstName: string
   lastName: string
-  role: 'user' | 'admin'
   isActive: boolean
 }
 
@@ -43,7 +42,6 @@ const UserManagementPage = () => {
   const [editForm, setEditForm] = useState<EditUserForm>({
     firstName: '',
     lastName: '',
-    role: 'user',
     isActive: true
   })
   const [editFormErrors, setEditFormErrors] = useState<Partial<EditUserForm>>({})
@@ -188,6 +186,38 @@ const UserManagementPage = () => {
     })
     setEditFormErrors({})
     setShowEditModal(true)
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    if (userId === currentUser?.id) {
+      setError("You can't delete your own account while logged in.")
+      return
+    }
+
+    const sure = window.confirm('Delete this user? This cannot be undone.')
+    if (!sure) return
+
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(body?.message || 'Failed to delete user')
+      }
+
+      setShowEditModal(false)
+      setEditingUser(null)
+      await fetchUsers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user')
+      console.error('Error deleting user:', err)
+    }
   }
 
   const validateEditForm = (): boolean => {
@@ -550,55 +580,58 @@ const UserManagementPage = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Select
-              label="Role"
-              value={editForm.role}
-              onChange={(e) => setEditForm({ ...editForm, role: e.target.value as 'user' | 'admin' })}
-              options={[
-                { value: 'user', label: 'User' },
-                { value: 'admin', label: 'Administrator' },
-              ]}
-              required
-            />
-
-            <Select
-              label="Status"
-              value={editForm.isActive ? 'active' : 'inactive'}
-              onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'active' })}
-              options={[
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' },
-              ]}
-              required
-            />
+            {editingUser?.role !== 'admin' ? (
+              <Select
+                label="Status"
+                value={editForm.isActive ? 'active' : 'inactive'}
+                onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'active' })}
+                options={[
+                  { value: 'active', label: 'Active' },
+                  { value: 'inactive', label: 'Inactive' },
+                ]}
+                required
+              />
+            ) : (
+              // Optional read-only hint for admins:
+              <div className="text-sm text-gray-500">
+                Status: <span className="font-medium">Active</span> (admins cannot be deactivated)
+              </div>
+            )}
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-            <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> Username cannot be changed after account creation.
-              To change a user's password, they must use the "Change Password" feature after logging in.
-            </p>
-          </div>
+          <div className="flex justify-between items-center pt-4 border-t">
+            {/* Left: Delete */}
+            <Button
+              variant="ghost"
+              leftIcon={<Trash2 className="w-4 h-4" />}
+              className="bg-red-600 text-white border border-red-600 hover:bg-red-700 hover:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => editingUser && handleDeleteUser(editingUser.id)}
+              disabled={updating || editingUser?.id === currentUser?.id}
+            >
+              Delete User
+            </Button>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setShowEditModal(false)
-                setEditingUser(null)
-                setEditFormErrors({})
-              }}
-              disabled={updating}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpdateUser}
-              loading={updating}
-              disabled={updating}
-            >
-              Update User
-            </Button>
+            {/* Right: Cancel / Update */}
+            <div className="space-x-3">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowEditModal(false)
+                  setEditingUser(null)
+                  setEditFormErrors({})
+                }}
+                disabled={updating}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateUser}
+                loading={updating}
+                disabled={updating}
+              >
+                Update User
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>
