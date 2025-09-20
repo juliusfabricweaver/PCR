@@ -1,9 +1,14 @@
 import React, { forwardRef } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/utils'
-import type { SelectProps } from '@/types'
+import type { SelectProps as BaseSelectProps } from '@/types'
 
-const Select = forwardRef<HTMLSelectElement, SelectProps>(({
+type OurSelectProps = BaseSelectProps & {
+  /** When true, treat this as required and show a custom validity message if empty */
+  requireUnknown?: boolean
+}
+
+const Select = forwardRef<HTMLSelectElement, OurSelectProps>(({
   label,
   error,
   helpText,
@@ -11,16 +16,42 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(({
   placeholder,
   className,
   required,
+  requireUnknown,
+  id,
+  onInvalid,
+  onInput,
+  onChange,
   ...props
 }, ref) => {
-  const selectId = `select-${Math.random().toString(36).substr(2, 9)}`
+  const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`
+
+  const handleInvalid: React.FormEventHandler<HTMLSelectElement> = (e) => {
+    if (requireUnknown) {
+      // Message matches your DOB pattern (“DNO/UTO if unknown”), tweak as needed per field
+      e.currentTarget.setCustomValidity('Please select a value (use DNO or UTO if unknown)')
+    }
+    if (onInvalid) onInvalid(e)
+  }
+
+  // Clear the custom validity as soon as the user interacts
+  const clearValidity = (el: HTMLSelectElement) => el.setCustomValidity('')
+
+  const handleInput: React.FormEventHandler<HTMLSelectElement> = (e) => {
+    clearValidity(e.currentTarget)
+    if (onInput) onInput(e)
+  }
+
+  const handleChange: React.ChangeEventHandler<HTMLSelectElement> = (e) => {
+    clearValidity(e.currentTarget)
+    if (onChange) onChange(e)
+  }
 
   return (
     <div className="space-y-1">
       {label && (
         <label
           htmlFor={selectId}
-          className={cn('form-label', required && 'form-label-required')}
+          className={cn('form-label', (required || requireUnknown) && 'form-label-required')}
         >
           {label}
         </label>
@@ -39,7 +70,10 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(({
           aria-describedby={
             error ? `${selectId}-error` : helpText ? `${selectId}-help` : undefined
           }
-          required={required}
+          required={required || requireUnknown}
+          onInvalid={handleInvalid}
+          onInput={handleInput}
+          onChange={handleChange}
           {...props}
         >
           {placeholder && (

@@ -292,32 +292,88 @@ const PCRPage: React.FC = () => {
   // Test function to fill sample data
   const fillSampleData = () => {
     const sampleData: Partial<PCRFormData> = {
-      date: formatDate(new Date()),
-      location: 'Main Campus - Building A',
-      callNumber: 'PCR-2025-001',
-      reportNumber: 'RPT-001',
-      supervisor: 'John Smith',
+      // --- Basic Information (required) ---
+      date: formatDate(new Date()),                 
+      location: 'Morisset 6th floor',
+      callNumber: '002',
+      reportNumber: '2025-001',
+      supervisor: 'Hailey Bieber',
+      primaryPSM: 'Kim Kardashian',
+      responder1: 'Frodo Baggins',
+      responder2: 'Cersei Lannister',
+      responder3: 'Tony Stark',
       timeNotified: '14:30',
+      workplaceInjury: 'No',
       onScene: '14:35',
-      clearedScene: '15:45',
-      firstAgencyOnScene: 'Campus Security',
-      patientName: 'Test Patient',
-      age: 25,
+      clearedScene: '15:15',
+      firstAgencyOnScene: 'Protection Services',
+
+      // Optional-but-nice
+      transportArrived: '15:10',
+      paramedicsCalledBy: 'Responder 1',
+
+      // --- Patient Information ---
+      patientName: 'Harry Potter',                 
+      age: '25',                                                            
       sex: 'Male',
-      positionOfPatient: 'Supine',
-      comments: 'Sample call description for testing PDF generation functionality.',
-      transferComments: 'Patient care transferred to paramedics without incident.',
-      patientCareTransferred: 'Paramedics',
-      timeCareTransferred: '15:40',
-      chiefComplaint: 'Minor injury - testing',
-      primaryPSM: 'Jane Doe'
+      status: 'Student',
+
+      // requireUnknown fields in this section
+      studentEmployeeNumber: '300718038',
+      emergencyContactName: 'Lily Potter (Mother)',
+      emergencyContactPhone: '(613) 671-3781',
+      contacted: 'Yes',
+      contactedBy: 'Harry Potter',
+
+      // --- Treatment / Findings ---
+      positionOfPatient: 'Seated',                
+      airwayManagement: ['Positioning'],
+      hemorrhageControl: ['Direct Pressure'],
+      immobilization: [],
+
+      // CPR/AED (optional)
+      timeStarted: '',
+      numberOfCycles: '',
+      numberOfShocks: '',
+      shockNotAdvised: '',
+
+      // --- OPQRST (optional) ---
+      onset: 'Acute',
+      provocation: 'Movement worsens',
+      quality: 'Sharp',
+      radiation: 'None',
+      scale: 4 as any, 
+      time: '14:20',
+
+      // --- Medical History (all these textareas were set with requireUnknown) ---
+      chiefComplaint: 'Injured knee',
+      signsSymptoms: 'Panic attack symptoms, bleeding right knee',
+      allergies: 'Bee stings',
+      medications: 'DNO',
+      medicalHistory: 'Nothing to note',
+      lastMeal: 'Happy Meal, 2 hours ago, sat well',
+      bodySurvey: 'No other findings',
+
+      // --- Oxygen Protocol (optional) ---
+      oxygenProtocol: {
+        saturation_range: '94–98%',
+        spo2: '96',
+        spo2_acceptable: 'Yes',
+      } as any,
+
+      // --- Additional Information (required group) ---
+      transferComments: 'Patient care transferred to paramedics yada yada yada.',
+      patientCareTransferred: 'Paramedics',        
+      unitNumber: 'A-123',                         
+      timeCareTransferred: '15:12',                
     }
 
     Object.entries(sampleData).forEach(([key, value]) => {
-      updateField(key as keyof PCRFormData, value)
+      updateField(key as keyof PCRFormData, value as any)
     })
     showNotification('Sample data filled for testing', 'info')
   }
+
 
   const hasTourniquet =
     Array.isArray(data.hemorrhageControl) &&
@@ -332,7 +388,7 @@ const PCRPage: React.FC = () => {
             {currentDraftId ? 'Edit Patient Care Report Draft' : 'Patient Care Report'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            {isLoadingDraft
+            {isLoadingDraft 
               ? 'Loading draft...'
               : currentDraftId
                 ? 'Editing existing draft - complete and submit when ready'
@@ -424,7 +480,7 @@ const PCRPage: React.FC = () => {
               value={data.supervisor || ''}
               onChange={e => updateField('supervisor', e.target.value)}
               error={errors.supervisor}
-              placeholder="Supervising officer"
+              placeholder="Supervisor name"
               required
             />
 
@@ -441,21 +497,21 @@ const PCRPage: React.FC = () => {
               label="Responder 1"
               value={data.responder1 || ''}
               onChange={e => updateField('responder1', e.target.value)}
-              placeholder="First responder"
+              placeholder="First responder name"
             />
 
             <Input
               label="Responder 2"
               value={data.responder2 || ''}
               onChange={e => updateField('responder2', e.target.value)}
-              placeholder="Second responder"
+              placeholder="Second responder name"
             />
 
             <Input
               label="Responder 3"
               value={data.responder3 || ''}
               onChange={e => updateField('responder3', e.target.value)}
-              placeholder="Third responder"
+              placeholder="Third responder name"
             />
           </div>
 
@@ -478,7 +534,7 @@ const PCRPage: React.FC = () => {
 
             <TimePicker
               label="Transport Arrived"
-              value={data.transportArrived || ''}
+              value={data.transportArrived || 'N/A'}
               onChange={e => updateField('transportArrived', e.target.value)}
             />
 
@@ -494,7 +550,7 @@ const PCRPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Paramedics Called by"
-              value={data.paramedicsCalledBy || ''}
+              value={data.paramedicsCalledBy || 'N/A'}
               onChange={e => updateField('paramedicsCalledBy', e.target.value)}
               placeholder="Who called paramedics"
             />
@@ -541,6 +597,7 @@ const PCRPage: React.FC = () => {
               onChange={e => handleAgeChange(e.target.value)}
               error={errors.age}
               placeholder="Age in years"
+              required
             />
           </div>
 
@@ -594,6 +651,7 @@ const PCRPage: React.FC = () => {
                 value={data.visitorText || ''}
                 onChange={e => updateField('visitorText', e.target.value)}
                 placeholder="Please specify"
+                requireUnknown
               />
             )}
           </div>
@@ -616,6 +674,7 @@ const PCRPage: React.FC = () => {
               value={data.studentEmployeeNumber || ''}
               onChange={e => updateField('studentEmployeeNumber', e.target.value)}
               placeholder="ID number"
+              requireUnknown
             />
           </div>
 
@@ -625,6 +684,7 @@ const PCRPage: React.FC = () => {
               value={data.emergencyContactName || ''}
               onChange={e => updateField('emergencyContactName', e.target.value)}
               placeholder="Contact person name and relationship"
+              requireUnknown
             />
 
             <Input
@@ -633,6 +693,7 @@ const PCRPage: React.FC = () => {
               value={data.emergencyContactPhone || ''}
               onChange={e => updateField('emergencyContactPhone', e.target.value)}
               placeholder="Phone number"
+              requireUnknown
             />
           </div>
 
@@ -654,6 +715,7 @@ const PCRPage: React.FC = () => {
               value={data.contactedBy || ''}
               onChange={e => updateField('contactedBy', e.target.value)}
               placeholder="Who made contact"
+              requireUnknown
             />
           </div>
         </FormSection>
@@ -670,6 +732,7 @@ const PCRPage: React.FC = () => {
               onChange={e => updateField('chiefComplaint', e.target.value)}
               placeholder="Primary reason for call..."
               rows={3}
+              requireUnknown
             />
 
             <Textarea
@@ -678,6 +741,7 @@ const PCRPage: React.FC = () => {
               onChange={e => updateField('signsSymptoms', e.target.value)}
               placeholder="Observable signs and reported symptoms..."
               rows={3}
+              requireUnknown
             />
           </div>
 
@@ -688,6 +752,7 @@ const PCRPage: React.FC = () => {
               onChange={e => updateField('allergies', e.target.value)}
               placeholder="Known allergies and reactions..."
               rows={2}
+              requireUnknown
             />
 
             <Textarea
@@ -696,6 +761,7 @@ const PCRPage: React.FC = () => {
               onChange={e => updateField('medications', e.target.value)}
               placeholder="Current medications (name, dose, reason, taken as prescribed)..."
               rows={2}
+              requireUnknown
             />
           </div>
 
@@ -706,6 +772,7 @@ const PCRPage: React.FC = () => {
               onChange={e => updateField('medicalHistory', e.target.value)}
               placeholder="Relevant medical history..."
               rows={2}
+              requireUnknown
             />
 
             <Textarea
@@ -714,6 +781,7 @@ const PCRPage: React.FC = () => {
               onChange={e => updateField('lastMeal', e.target.value)}
               placeholder="When and what was last consumed, and whether it sat well..."
               rows={2}
+              requireUnknown
             />
           </div>
 
@@ -723,6 +791,7 @@ const PCRPage: React.FC = () => {
             onChange={e => updateField('bodySurvey', e.target.value)}
             placeholder="Physical examination findings..."
             rows={3}
+            requireUnknown
           />
         </FormSection>
 
@@ -1008,6 +1077,7 @@ const PCRPage: React.FC = () => {
                   value={data.unitNumber || ''}
                   onChange={(e) => updateField('unitNumber', e.target.value)}
                   placeholder="Paramedic unit number"
+                  requireUnknown
                 />
               )}
 
@@ -1017,6 +1087,7 @@ const PCRPage: React.FC = () => {
                   value={data.badgeNumber || ''}
                   onChange={(e) => updateField('badgeNumber', e.target.value)}
                   placeholder="Police badge number"
+                  requireUnknown
                 />
               )}
 
@@ -1026,6 +1097,7 @@ const PCRPage: React.FC = () => {
                   value={data.clinicName || ''}
                   onChange={(e) => updateField('clinicName', e.target.value)}
                   placeholder="Clinic name"
+                  requireUnknown
                 />
               )}
             </div>

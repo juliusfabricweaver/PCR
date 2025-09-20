@@ -141,6 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     restoreSession()
   }, [clearStoredAuth])
 
+
   const login = async (username: string, password: string): Promise<void> => {
     console.log('Login attempt:', { username })
     dispatch({ type: 'LOGIN_START' })
@@ -258,6 +259,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     window.addEventListener('session-invalid', handleSessionInvalid)
     return () => window.removeEventListener('session-invalid', handleSessionInvalid)
   }, [clearStoredAuth])
+
+  // Idle logout (10 minutes)
+  useEffect(() => {
+    // Don’t start until we’re done restoring auth AND authenticated
+    if (state.isLoading || !state.isAuthenticated) return;
+
+    const INACTIVITY_MS = 10 * 60 * 1000; // 10 minutes
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const isUnloadingRef = { current: false }; 
+    let lastWrite = 0;
+
+    const scheduleLogout = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        // Don’t logout while the browser is unloading / refreshing
+        if (isUnloadingRef.current) return;
+        logout();
+      }, INACTIVITY_MS);
+    };
+
+    // Keep the events tame (scroll/wheel can be noisy)
+    const activityEvents: (keyof WindowEventMap)[] = [
+      'mousemove', 'mousedown', 'keydown', 'touchstart'
+    ];
+
+    const onActivity = () => {
+      // Throttle cross-tab sync writes to once per 5s
+      const now = Date.now();
+      if (now - lastWrite > 5000) {
+        localStorage.setItem('pcr_last_activity', now.toString());
+        lastWrite = now;
+      }
+      scheduleLogout();
+    };
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'pcr_last_activity') {
+        scheduleLogout();
+      }
+    };
+
+    const onVisibility = () => {
+      if (!document.hidden) onActivity();
+    };
+
+    const onBeforeUnload = () => {
+      isUnloadingRef.current = true;
+      clearTimeout(timeoutId);
+    };
+
+    // arm
+    scheduleLogout();
+    activityEvents.forEach(ev => window.addEventListener(ev, onActivity, { passive: true }));
+    window.addEventListener('storage', onStorage);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    return () => {
+      clearTimeout(timeoutId);
+      activityEvents.forEach(ev => window.removeEventListener(ev, onActivity));
+      window.removeEventListener('storage', onStorage);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [state.isLoading, state.isAuthenticated, logout]);
 
   const contextValue: AuthContextType = {
     user: state.user,
