@@ -1,9 +1,29 @@
 import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
-const DB_PATH = path.join(process.cwd(), 'pcr_database.db');
+// In production, use a proper location for the database
+const getDbPath = () => {
+  if (process.env.NODE_ENV === 'production') {
+    // Use the home directory for production database
+    const dataDir = path.join(os.homedir(), '.pcr-app');
+
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    return path.join(dataDir, 'pcr_database.db');
+  }
+  return path.join(process.cwd(), 'pcr_database.db');
+};
+
+const DB_PATH = getDbPath();
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
+
+console.log('Database path:', DB_PATH);
+console.log('Schema path:', SCHEMA_PATH);
 
 export class DatabaseManager {
   private db: Database.Database;
