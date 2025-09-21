@@ -41,28 +41,39 @@ function createWindow() {
 }
 
 function startBackend() {
-  const { spawn } = require('child_process');
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+  return new Promise((resolve) => {
+    const { spawn } = require('child_process');
+    const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
-  if (isDev) {
-    console.log('Backend should be started separately in development mode');
-    return;
-  }
+    if (isDev) {
+      console.log('Backend should be started separately in development mode');
+      resolve();
+      return;
+    }
 
-  // Use the compiled JavaScript backend in production
-  const backendPath = path.join(__dirname, '..', 'dist', 'backend', 'index.js');
-  backendProcess = spawn('node', [backendPath], {
-    env: { ...process.env, NODE_ENV: 'production' },
-    stdio: 'inherit'
-  });
+    // Use the compiled JavaScript backend in production
+    const backendPath = path.join(__dirname, '..', 'dist', 'backend', 'index.js');
+    console.log('Starting backend from:', backendPath);
 
-  backendProcess.on('error', (err) => {
-    console.error('Failed to start backend:', err);
+    backendProcess = spawn('node', [backendPath], {
+      env: { ...process.env, NODE_ENV: 'production', PORT: '3000' },
+      stdio: 'inherit'
+    });
+
+    backendProcess.on('error', (err) => {
+      console.error('Failed to start backend:', err);
+    });
+
+    // Wait a bit for backend to start
+    setTimeout(() => {
+      console.log('Backend should be ready now');
+      resolve();
+    }, 2000);
   });
 }
 
-app.whenReady().then(() => {
-  startBackend();
+app.whenReady().then(async () => {
+  await startBackend();
   createWindow();
 
   app.on('activate', () => {
