@@ -276,6 +276,7 @@ const UserManagementPage = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
+      timeZone: 'Etc/GMT+8',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
