@@ -51,7 +51,7 @@ router.post('/', authenticateToken, requireRole(['admin']), logActivity('create_
     db.prepare(`
       INSERT INTO users (id, username, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `).run(userId, username, '', passwordHash, firstName, lastName, role);
+    `).run(userId, username, username, passwordHash, firstName, lastName, role);
 
     // Get created user
     const newUser = db.prepare(`

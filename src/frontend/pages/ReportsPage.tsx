@@ -119,7 +119,7 @@ const ReportsPage = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      timeZone: 'Etc/GMT+3',
+      timeZone: 'Etc/GMT+8',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -130,7 +130,7 @@ const ReportsPage = () => {
 
   const formatReportId = (dateString: string) => {
     const date = new Date(
-      new Date(dateString).toLocaleString('en-US', { timeZone: 'Etc/GMT+3' })
+      new Date(dateString).toLocaleString('en-US', { timeZone: 'Etc/GMT+8' })
     )
 
     const year = date.getFullYear()
