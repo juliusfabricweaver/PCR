@@ -557,7 +557,7 @@ export class PDFService {
     yPosition = renderFieldsRow(
       pdf,
       [
-        { label: 'Paramedics Called by:', value: data.paramedicsCalledBy || '' },
+        { label: 'Paramedics Called by:', value: data.paramedicsCalledBy || 'N/A' },
         { label: 'First Agency on Scene:', value: data.firstAgencyOnScene || '' },
       ],
       [2, 2], 
@@ -1106,83 +1106,81 @@ export class PDFService {
         )
       }
 
-      		// 3) Flow Rate Alterations table (transposed)
+    // 3) Flow Rate Alterations table (transposed)
 		const alterations = (oxygenProtocol?.flowRateAlterations || []).filter(
 			(a) => (a?.time && a.time.trim() !== '') || (a?.flowRate && String(a.flowRate).trim() !== '')
 		)
 
-		if (oxygenProtocol.oxygen_given === 'yes' && alterations.length > 0) {
-			// small sub-header
-			yPosition += 4
-			pdf.setFont('helvetica', 'bold')
-			pdf.text('Flow Rate Alterations:', options.margins.left, yPosition)
-			pdf.setFont('helvetica', 'normal')
-			yPosition += 4
+  if (oxygenProtocol.oxygen_given === 'yes' && alterations.length > 0) {
+    // table metrics (we need these BEFORE drawing to know required height)
+    const labels = ['Time of Change', 'Flow Rate (L/min)']
+    const nRows = labels.length
+    const rowHeight = 6
+    const labelColWidth = Math.min(30, contentWidth * 0.25)
+    const nDataCols = Math.max(1, alterations.length)
+    const denom = Math.max(8, nDataCols)
+    const dataColWidth = (contentWidth - labelColWidth) / denom
+    const tableHeight = nRows * rowHeight
 
-			// transposed grid: rows = fields, columns = entries
-			const labels = ['Time of Change', 'Flow Rate (L/min)']
-			const nRows = labels.length
-			const nDataCols = Math.max(1, alterations.length)
+    // need: spacing before header (4) + header line (4) + table + trailing spacer (6)
+    const needed = 4 + 4 + tableHeight + 6
+    yPosition = ensureSpaceFor(pdf, options, yPosition, needed)
 
-			const x0 = options.margins.left
-			const rowHeight = 6
-			const labelColWidth = Math.min(30, contentWidth * 0.25)
+    // small sub-header
+    yPosition += 4
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('Flow Rate Alterations:', options.margins.left, yPosition)
+    pdf.setFont('helvetica', 'normal')
+    yPosition += 4
 
-			// columns take 1/8 width unless more than 8 entries, then fit all
-			const denom = Math.max(8, nDataCols)
-			const dataColWidth = (contentWidth - labelColWidth) / denom
-			const tableWidth = labelColWidth + nDataCols * dataColWidth
-			const tableHeight = nRows * rowHeight
+    const x0 = options.margins.left
+    const tableWidth = labelColWidth + nDataCols * dataColWidth
 
-			// left header column background
-			pdf.setFillColor(220, 220, 220)
-			pdf.rect(x0, yPosition, labelColWidth, tableHeight, 'F')
+    // left header column background
+    pdf.setFillColor(220, 220, 220)
+    pdf.rect(x0, yPosition, labelColWidth, tableHeight, 'F')
 
-			// outer border (actual used width)
-			pdf.setDrawColor(0)
-			pdf.rect(x0, yPosition, tableWidth, tableHeight)
+    // outer border (actual used width)
+    pdf.setDrawColor(0)
+    pdf.rect(x0, yPosition, tableWidth, tableHeight)
 
-			// black vertical separator after labels column
-			const sepX = x0 + labelColWidth
-			pdf.line(sepX, yPosition, sepX, yPosition + tableHeight)
+    // black vertical separator after labels column
+    const sepX = x0 + labelColWidth
+    pdf.line(sepX, yPosition, sepX, yPosition + tableHeight)
 
-			// vertical lines between data columns
-			for (let c = 1; c < nDataCols; c++) {
-				const vx = x0 + labelColWidth + c * dataColWidth
-				pdf.line(vx, yPosition, vx, yPosition + tableHeight)
-			}
+    // vertical lines between data columns
+    for (let c = 1; c < nDataCols; c++) {
+      const vx = x0 + labelColWidth + c * dataColWidth
+      pdf.line(vx, yPosition, vx, yPosition + tableHeight)
+    }
 
-			// horizontal lines between rows
-			for (let r = 1; r < nRows; r++) {
-				const hy = yPosition + r * rowHeight
-				pdf.line(x0, hy, x0 + tableWidth, hy)
-			}
+    // horizontal lines between rows
+    for (let r = 1; r < nRows; r++) {
+      const hy = yPosition + r * rowHeight
+      pdf.line(x0, hy, x0 + tableWidth, hy)
+    }
 
-			// row labels
-			pdf.setFontSize(8)
-			pdf.setFont('helvetica', 'bold')
-			labels.forEach((label, r) => {
-				pdf.text(label, x0 + (labelColWidth / 2), yPosition + r * rowHeight + 4, { align: 'center' })
-			})
+    // row labels
+    pdf.setFontSize(8)
+    pdf.setFont('helvetica', 'bold')
+    labels.forEach((label, r) => {
+      pdf.text(label, x0 + (labelColWidth / 2), yPosition + r * rowHeight + 4, { align: 'center' })
+    })
 
-			// data cells
-			pdf.setFont('helvetica', 'normal')
-			for (let c = 0; c < nDataCols; c++) {
-				const a = alterations[c] || {}
-				const colValues = [
-					a?.time ?? '',
-					a?.flowRate != null ? String(a.flowRate) : '',
-				]
+    // data cells
+    pdf.setFont('helvetica', 'normal')
+    for (let c = 0; c < nDataCols; c++) {
+      const a = alterations[c] || {}
+      const colValues = [a?.time ?? '', a?.flowRate != null ? String(a.flowRate) : '']
+      colValues.forEach((cell, r) => {
+        const cellX = x0 + labelColWidth + c * dataColWidth
+        const cellY = yPosition + r * rowHeight
+        pdf.text(String(cell), cellX + (dataColWidth / 2), cellY + 4, { align: 'center' })
+      })
+    }
 
-				colValues.forEach((cell, r) => {
-					const cellX = x0 + labelColWidth + c * dataColWidth
-					const cellY = yPosition + r * rowHeight
-					pdf.text(String(cell), cellX + (dataColWidth / 2), cellY + 4, { align: 'center' })
-				})
-			}
-
-			yPosition += tableHeight + 6
-		}
+    yPosition += tableHeight + 6
+  }
 
       // 4) End of Therapy
       const hasEnd = !!oxygenProtocol?.reasonForEndingTherapy || !!oxygenProtocol?.whoStartedTherapy

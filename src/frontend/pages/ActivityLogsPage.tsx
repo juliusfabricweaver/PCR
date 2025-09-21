@@ -109,6 +109,7 @@ const ActivityLogsPage = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
+      timeZone: 'Etc/GMT+8',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -228,6 +229,7 @@ const ActivityLogsPage = () => {
                 { value: 'logout', label: 'Logout' },
                 { value: 'create_user', label: 'Create User' },
                 { value: 'update_user', label: 'Update User' },
+                { value: 'delete_user', label: 'Delete User' },
                 { value: 'create_pcr', label: 'Create PCR' },
                 { value: 'update_pcr', label: 'Update PCR' },
                 { value: 'submit_pcr', label: 'Submit PCR' },

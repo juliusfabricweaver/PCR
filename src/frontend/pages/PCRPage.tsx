@@ -508,7 +508,7 @@ const PCRPage: React.FC = () => {
 
             <TimePicker
               label="Transport Arrived"
-              value={data.transportArrived || 'N/A'}
+              value={data.transportArrived || ''}
               onChange={e => updateField('transportArrived', e.target.value)}
             />
 
@@ -524,7 +524,7 @@ const PCRPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Paramedics Called by"
-              value={data.paramedicsCalledBy || 'N/A'}
+              value={data.paramedicsCalledBy || ''}
               onChange={e => updateField('paramedicsCalledBy', e.target.value)}
               placeholder="Who called paramedics"
             />
