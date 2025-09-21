@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Loading, Alert } from '@/components/ui'
 import { pdfService } from '@/services/pdf.service'
 import { useAuth } from '@/context/AuthContext'
+import { configService } from '@/services/config.service'
 
 interface PCRReport {
   id: string
@@ -31,7 +32,7 @@ const ReportsPage = () => {
         return
       }
 
-      const response = await fetch('/api/pcr', {
+      const response = await fetch(configService.getApiUrl('/api/pcr'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -59,7 +60,7 @@ const ReportsPage = () => {
         return
       }
 
-      const response = await fetch(`/api/pcr/${reportId}`, {
+      const response = await fetch(configService.getApiUrl(`/api/pcr/${reportId}`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -98,7 +99,7 @@ const ReportsPage = () => {
         return
       }
 
-      const res = await fetch(`/api/pcr/${reportId}`, {
+      const res = await fetch(configService.getApiUrl(`/api/pcr/${reportId}`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

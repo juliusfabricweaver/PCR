@@ -2,6 +2,7 @@
  * Session management service for authentication and concurrent session handling
  */
 import { ApiResponse } from '@/types'
+import { configService } from './config.service'
 
 interface SessionInfo {
   id: string
@@ -22,13 +23,11 @@ interface ConcurrentSessionData {
 }
 
 export class SessionService {
-  private baseUrl: string
   private authToken: string | null = null
   private sessionId: string | null = null
   private deviceId: string
 
-  constructor(baseUrl: string = '/api') {
-    this.baseUrl = baseUrl
+  constructor() {
     this.deviceId = this.generateDeviceId()
   }
 
@@ -53,7 +52,7 @@ export class SessionService {
   async initializeSession(token: string): Promise<SessionInfo> {
     this.authToken = token
     
-    const response = await this.makeRequest<ApiResponse>(`${this.baseUrl}/auth/session`, {
+    const response = await this.makeRequest<ApiResponse>(configService.getApiUrl('/api/auth/session'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -81,7 +80,7 @@ export class SessionService {
       throw new Error('No active session to extend')
     }
 
-    const response = await this.makeRequest<ApiResponse>(`${this.baseUrl}/auth/session/extend`, {
+    const response = await this.makeRequest<ApiResponse>(configService.getApiUrl('/api/auth/session/extend'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.authToken}`,
@@ -102,7 +101,7 @@ export class SessionService {
     if (!this.authToken || !this.sessionId) return
 
     try {
-      await this.makeRequest(`${this.baseUrl}/auth/session/invalidate`, {
+      await this.makeRequest(configService.getApiUrl('/api/auth/session/invalidate'), {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.authToken}`,
@@ -123,7 +122,7 @@ export class SessionService {
       throw new Error('No authentication token')
     }
 
-    const response = await this.makeRequest<ApiResponse>(`${this.baseUrl}/auth/sessions`, {
+    const response = await this.makeRequest<ApiResponse>(configService.getApiUrl('/api/auth/sessions'), {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${this.authToken}`,
@@ -145,7 +144,7 @@ export class SessionService {
       throw new Error('No authentication token')
     }
 
-    const response = await this.makeRequest<ApiResponse>(`${this.baseUrl}/auth/session/${sessionId}/terminate`, {
+    const response = await this.makeRequest<ApiResponse>(configService.getApiUrl(`/api/auth/session/${sessionId}/terminate`), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.authToken}`,
@@ -165,7 +164,7 @@ export class SessionService {
       throw new Error('No authentication token')
     }
 
-    const response = await this.makeRequest<ApiResponse>(`${this.baseUrl}/auth/sessions/terminate-others`, {
+    const response = await this.makeRequest<ApiResponse>(configService.getApiUrl('/api/auth/sessions/terminate-others'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.authToken}`,
@@ -186,7 +185,7 @@ export class SessionService {
     if (!this.authToken || !this.sessionId) return false
 
     try {
-      const response = await this.makeRequest<ApiResponse>(`${this.baseUrl}/auth/session/validate`, {
+      const response = await this.makeRequest<ApiResponse>(configService.getApiUrl('/api/auth/session/validate'), {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${this.authToken}`,
@@ -206,7 +205,7 @@ export class SessionService {
     if (!this.authToken || !this.sessionId) return
 
     try {
-      await this.makeRequest(`${this.baseUrl}/auth/session/activity`, {
+      await this.makeRequest(configService.getApiUrl('/api/auth/session/activity'), {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.authToken}`,
@@ -225,7 +224,7 @@ export class SessionService {
       throw new Error('No active session')
     }
 
-    const response = await this.makeRequest<ApiResponse>(`${this.baseUrl}/auth/session/info`, {
+    const response = await this.makeRequest<ApiResponse>(configService.getApiUrl('/api/auth/session/info'), {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${this.authToken}`,

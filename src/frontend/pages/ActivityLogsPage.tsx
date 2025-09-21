@@ -3,6 +3,7 @@ import { History, Filter, Calendar, User, Activity, RefreshCw, ChevronLeft, Chev
 import { Button, Loading, Alert } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
+import { configService } from '@/services/config.service'
 import type { ActivityLog, PaginatedResponse } from '@/types'
 
 interface LogFilters {
@@ -59,7 +60,7 @@ const ActivityLogsPage = () => {
       if (filters.dateFrom) queryParams.append('dateFrom', filters.dateFrom)
       if (filters.dateTo) queryParams.append('dateTo', filters.dateTo)
 
-      const response = await fetch(`/api/logs?${queryParams.toString()}`, {
+      const response = await fetch(configService.getApiUrl(`/api/logs?${queryParams.toString()}`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

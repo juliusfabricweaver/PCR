@@ -18,6 +18,7 @@ import { useNotification } from '../context/NotificationContext'
 import { useAuth } from '../context/AuthContext'
 import { cn, getCurrentTime, formatDate } from '../utils'
 import { pdfService } from '../services/pdf.service'
+import { configService } from '../services/config.service'
 import type { PCRFormData, VitalSign, VitalSigns2 } from '../types'
 
 const PCRPage: React.FC = () => {
@@ -41,7 +42,7 @@ const PCRPage: React.FC = () => {
         setCurrentDraftId(draftId)
 
         try {
-          const response = await fetch(`/api/pcr/${draftId}`, {
+          const response = await fetch(configService.getApiUrl(`/api/pcr/${draftId}`), {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
@@ -96,10 +97,10 @@ const PCRPage: React.FC = () => {
         if (confirmed) {
           try {
             // Update existing draft or create new submission
-            const url = currentDraftId ? `/api/pcr/${currentDraftId}` : '/api/submissions'
+            const endpoint = currentDraftId ? `/api/pcr/${currentDraftId}` : '/api/submissions'
             const method = currentDraftId ? 'PUT' : 'POST'
 
-            const response = await fetch(url, {
+            const response = await fetch(configService.getApiUrl(endpoint), {
               method,
               headers: {
                 'Content-Type': 'application/json',
@@ -178,10 +179,10 @@ const PCRPage: React.FC = () => {
 
     try {
       // If we're editing an existing draft, update it. Otherwise create new draft.
-      const url = currentDraftId ? `/api/pcr/${currentDraftId}` : '/api/pcr'
+      const endpoint = currentDraftId ? `/api/pcr/${currentDraftId}` : '/api/pcr'
       const method = currentDraftId ? 'PUT' : 'POST'
 
-      const response = await fetch(url, {
+      const response = await fetch(configService.getApiUrl(endpoint), {
         method,
         headers: {
           'Content-Type': 'application/json',

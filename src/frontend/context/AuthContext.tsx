@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
 import type { AuthContextType, User } from '@/types'
 import { sessionService } from '@/services/session.service'
+import { configService } from '@/services/config.service'
 
 interface AuthState {
   user: User | null
@@ -148,7 +149,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       // Call actual backend API
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(configService.getApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -205,7 +206,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Invalidate session on backend
       const token = localStorage.getItem('pcr_token')
       if (token) {
-        await fetch('/api/auth/logout', {
+        await fetch(configService.getApiUrl('/api/auth/logout'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

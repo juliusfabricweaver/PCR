@@ -3,6 +3,7 @@ import { Plus, UserCog, Shield, User as UserIcon, Edit, Trash2 } from 'lucide-re
 import { Button, Loading, Alert, Modal } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
+import { configService } from '@/services/config.service'
 import type { User } from '@/types'
 
 interface CreateUserForm {
@@ -65,7 +66,7 @@ const UserManagementPage = () => {
         return
       }
 
-      const response = await fetch('/api/users', {
+      const response = await fetch(configService.getApiUrl('/api/users'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -119,7 +120,7 @@ const UserManagementPage = () => {
     try {
       setCreating(true)
 
-      const response = await fetch('/api/users', {
+      const response = await fetch(configService.getApiUrl('/api/users'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -154,7 +155,7 @@ const UserManagementPage = () => {
 
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      const response = await fetch(`/api/users/${userId}`, {
+      const response = await fetch(configService.getApiUrl(`/api/users/${userId}`), {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -198,7 +199,7 @@ const UserManagementPage = () => {
     if (!sure) return
 
     try {
-      const res = await fetch(`/api/users/${userId}`, {
+      const res = await fetch(configService.getApiUrl(`/api/users/${userId}`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -241,7 +242,7 @@ const UserManagementPage = () => {
     try {
       setUpdating(true)
 
-      const response = await fetch(`/api/users/${editingUser.id}`, {
+      const response = await fetch(configService.getApiUrl(`/api/users/${editingUser.id}`), {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
