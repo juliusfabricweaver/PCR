@@ -1,8 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter, HashRouter } from 'react-router-dom'
 import App from '@/App.tsx'
 import './index.css'
+
+// Check if running in Electron
+const isElectron = !!(window && window.process && window.process.type)
 
 // Error boundary for development
 class ErrorBoundary extends React.Component<
@@ -59,12 +62,15 @@ class ErrorBoundary extends React.Component<
 
 const root = ReactDOM.createRoot(document.getElementById('root')!)
 
+// Use HashRouter for Electron/file:// protocol, BrowserRouter for web
+const Router = isElectron || window.location.protocol === 'file:' ? HashRouter : BrowserRouter
+
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter>
+      <Router>
         <App />
-      </BrowserRouter>
+      </Router>
     </ErrorBoundary>
   </React.StrictMode>
 )
