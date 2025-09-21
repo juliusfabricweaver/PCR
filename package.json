@@ -118,9 +118,9 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "src/backend/**/*",
       "node_modules/**/*",
-      "package.json"
+      "package.json",
+      "pcr_database.db"
     ],
     "win": {
       "target": [

@@ -30,7 +30,7 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'frontend', 'index.html'));
   }
 
   mainWindow.on('closed', () => {
@@ -47,11 +47,9 @@ function startBackend() {
     return;
   }
 
-  const backendPath = path.join(__dirname, '..', 'src', 'backend', 'src', 'index.ts');
-  backendProcess = spawn('node', [
-    '--require', 'ts-node/register',
-    backendPath
-  ], {
+  // Use the compiled JavaScript backend in production
+  const backendPath = path.join(__dirname, '..', 'dist', 'backend', 'index.js');
+  backendProcess = spawn('node', [backendPath], {
     env: { ...process.env, NODE_ENV: 'production' },
     stdio: 'inherit'
   });
