@@ -10,15 +10,9 @@ export declare const API_ENDPOINTS: {
         readonly REFRESH: "/api/auth/refresh";
         readonly PROFILE: "/api/auth/profile";
     };
-    readonly PATIENTS: {
-        readonly BASE: "/api/patients";
-        readonly BY_ID: (id: string) => string;
-        readonly SEARCH: "/api/patients/search";
-    };
     readonly PCR: {
         readonly BASE: "/api/pcr";
         readonly BY_ID: (id: string) => string;
-        readonly BY_PATIENT: (patientId: string) => string;
         readonly EXPORT_PDF: (id: string) => string;
     };
     readonly USERS: {
@@ -30,8 +24,6 @@ export declare const ROUTES: {
     readonly HOME: "/";
     readonly LOGIN: "/login";
     readonly DASHBOARD: "/dashboard";
-    readonly PATIENTS: "/patients";
-    readonly PATIENT_DETAIL: "/patients/:id";
     readonly PCR: "/pcr";
     readonly PCR_NEW: "/pcr/new";
     readonly PCR_EDIT: "/pcr/:id/edit";
@@ -43,7 +35,6 @@ export declare const ROUTES: {
 export declare const STORAGE_KEYS: {
     readonly AUTH_TOKEN: "pcr_auth_token";
     readonly USER_PREFERENCES: "pcr_user_preferences";
-    readonly DRAFT_PCR: "pcr_draft_";
     readonly THEME: "pcr_theme";
 };
 export declare const VALIDATION_RULES: {

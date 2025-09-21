@@ -1,252 +1,368 @@
-# PCR Frontend Application
+# PCR Application - Patient Care Report System
 
-A professional, user-friendly React frontend for the Patient Care Report (PCR) application built with modern web technologies.
+A modern, cross-platform Patient Care Report (PCR) application designed for Emergency Medical Services (EMS) and first responders. Built with React, TypeScript, and Electron for seamless desktop and web deployment.
 
-## 🏗️ Architecture
+![PCR Application](https://img.shields.io/badge/version-1.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue)
+![React](https://img.shields.io/badge/React-18.2-61dafb)
 
-### Technology Stack
-- **React 18** - Modern React with hooks and concurrent features
-- **TypeScript** - Type-safe JavaScript with excellent developer experience
-- **Vite** - Fast build tool with HMR (Hot Module Replacement)
-- **Tailwind CSS** - Utility-first CSS framework with custom healthcare theme
-- **React Router** - Client-side routing with protected routes
-- **React Hook Form** - Performant forms with easy validation
-- **Fabric.js** - Canvas library for injury diagram drawing
-- **Lucide React** - Beautiful, customizable icons
+## 🚨 Overview
 
-### Component Architecture
-```
-src/frontend/
-├── components/
-│   ├── ui/           # Reusable UI components (Button, Card, Modal, etc.)
-│   ├── forms/        # Form components (Input, Select, Checkbox, etc.)
-│   ├── layout/       # Layout components (Header, Sidebar, Footer)
-│   └── composite/    # Complex components (VitalSignsTable, InjuryCanvas)
-├── pages/            # Page components
-├── context/          # React Context providers
-├── hooks/            # Custom React hooks
-├── utils/            # Utility functions
-├── types/            # TypeScript type definitions
-└── styles/           # Global styles and Tailwind config
-```
+The PCR Application streamlines emergency medical documentation with a comprehensive digital solution that replaces traditional paper-based patient care reports. It enables first responders to quickly capture, manage, and export critical patient information during emergency situations.
 
-## 🎯 Features
+### Key Features
 
-### Core Features
-- **Authentication System** - Secure login with role-based access
-- **Comprehensive PCR Form** - All fields from `form_inputs.md` specification
-- **Real-time Validation** - Client-side form validation with error handling
-- **Auto-save** - Automatic draft saving every 30 seconds
-- **Dark Mode** - Full dark mode support with theme persistence
-- **Responsive Design** - Mobile-first design that works on all devices
-- **Accessibility** - WCAG 2.1 AA compliant with ARIA labels and keyboard navigation
+- **Real-time Patient Documentation** - Capture comprehensive patient information during emergency responses
+- **Interactive Injury Mapping** - Visual body diagram for marking and annotating injuries
+- **Vital Signs Tracking** - Time-stamped vital signs monitoring with automatic calculations
+- **Oxygen Protocol Management** - Built-in O2 therapy tracking with protocol compliance
+- **Draft Management** - Auto-save functionality with 30-second intervals to prevent data loss
+- **PDF Export** - Generate professional PCR reports for medical records
+- **Role-Based Access Control** - Secure authentication with admin and user roles
+- **Activity Logging** - Complete audit trail of all system activities
+- **Cross-Platform Desktop App** - Native desktop experience via Electron
 
-### Advanced Features
-- **Injury Canvas** - Interactive body diagram for marking injuries
-- **Vital Signs Tables** - Editable tables with time tracking
-- **Oxygen Protocol** - Specialized form for oxygen therapy documentation
-- **Session Management** - Automatic timeout with warnings
-- **Progress Tracking** - Visual indicators for form completion
-- **Print Support** - Print-optimized layouts for reports
+## 🛠️ Technology Stack
 
-## 🚀 Getting Started
+### Frontend
+- **React 18** - Modern UI library with hooks and context
+- **TypeScript** - Type-safe development experience
+- **Vite** - Lightning-fast build tooling
+- **Tailwind CSS** - Utility-first styling with healthcare theme
 
-### Prerequisites
-- Node.js 18+ 
-- npm or yarn
+### Backend
+- **Express.js** - Fast, minimalist web framework
+- **TypeScript** - Type-safe API development
+- **SQLite (better-sqlite3)** - High-performance embedded database
+- **JWT Authentication** - Secure token-based auth
+- **Joi** - Input validation
+- **Winston** - Professional logging
+- **Helmet** - Security middleware
+
+### Desktop
+- **Electron** - Cross-platform desktop application
+- **Electron Builder** - Automated packaging and distribution
+
+## 📋 Prerequisites
+
+- **Node.js** >= 18.0.0
+- **npm** >= 9.0.0
+- **Git** (for version control)
+
+## 🚀 Quick Start
 
 ### Installation
+
 ```bash
+# Clone the repository
+git clone https://github.com/yourusername/pcr-application.git
+cd pcr-application
+
 # Install dependencies
 npm install
 
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
+# Create default user accounts
+npm run create-accounts
 ```
 
-### Demo Credentials
+### Development
+
+```bash
+# Start full development environment (frontend + backend)
+npm run dev
+
+# Start frontend only (Vite dev server on port 5173)
+npm run frontend:dev
+
+# Start backend only (Express server on port 3000)
+npm run backend:dev
+
+# Start Electron desktop app in development
+npm run electron:dev
+```
+
+### Default Accounts
+
+After running `npm run create-accounts`:
 - **Admin**: username: `admin`, password: `admin`
 - **User**: username: `user`, password: `user`
 
-## 🎨 Design System
+⚠️ **Important**: Change these passwords immediately in production!
 
-### Color Palette
-- **Primary**: Medical blue (#0ea5e9) - Professional and trustworthy
-- **Medical**: Lighter blue (#0284c7) - Healthcare-specific actions
-- **Emergency**: Red (#ef4444) - Urgent/critical information
-- **Success**: Green (#10b981) - Positive actions and confirmations
+## 📁 Project Structure
 
-### Typography
-- **Primary**: Inter - Clean, professional sans-serif
-- **Medical**: Roboto - Alternative for medical contexts
-
-## 📱 Responsive Breakpoints
-- **Mobile**: < 640px
-- **Tablet**: 640px - 1024px
-- **Desktop**: > 1024px
-
-## 🔧 Development
-
-### Project Structure
-The application follows a modular architecture with clear separation of concerns:
-
-#### Components
-- **UI Components**: Reusable, unstyled components that can be themed
-- **Form Components**: Specialized form inputs with validation
-- **Layout Components**: App shell and navigation components
-- **Composite Components**: Complex, domain-specific components
-
-#### State Management
-- **React Context**: Global state for auth, notifications, and form data
-- **Custom Hooks**: Reusable stateful logic (useAutosave, useTimeout)
-- **Local State**: Component-specific state using useState/useReducer
-
-#### Routing
-- **Protected Routes**: Authentication-required pages
-- **Lazy Loading**: Code-splitting for better performance
-- **Breadcrumb Navigation**: Clear navigation hierarchy
-
-### Key Patterns
-
-#### Form Handling
-```typescript
-// Uses React Context for form state management
-const { data, updateField, errors, isDirty } = useForm()
-
-// Auto-save functionality
-const { loadDraft, clearDraft } = useAutosave({
-  key: 'pcr-form',
-  data: formData,
-  interval: 30000
-})
+```
+PCR/
+├── src/
+│   ├── frontend/          # React application
+│   │   ├── components/    # Reusable components
+│   │   │   ├── ui/        # Base UI components
+│   │   │   ├── forms/     # Form components
+│   │   │   ├── layout/    # Layout components
+│   │   │   └── composite/ # Complex components
+│   │   ├── context/       # React Context providers
+│   │   ├── hooks/         # Custom React hooks
+│   │   ├── pages/         # Page components
+│   │   ├── services/      # API services
+│   │   └── utils/         # Utility functions
+│   ├── backend/           # Express.js server
+│   │   └── src/
+│   │       ├── database/  # SQLite setup
+│   │       ├── routes/    # API endpoints
+│   │       ├── services/  # Business logic
+│   │       ├── middleware/# Express middleware
+│   │       └── scripts/   # Utility scripts
+│   └── shared/            # Shared TypeScript types
+│       └── types/         # Common interfaces
+├── electron/              # Electron main process
+├── public/                # Static assets
+├── scripts/               # Build and deployment scripts
+└── dist/                  # Production build output
 ```
 
-#### Component Composition
-```typescript
-// Compound component pattern
-<Card>
-  <Card.Header title="Patient Information" />
-  <Card.Body>
-    <FormSection title="Basic Info">
-      <Input label="Name" />
-    </FormSection>
-  </Card.Body>
-</Card>
+## 🔧 Available Scripts
+
+### Development
+```bash
+npm run dev              # Start full dev environment
+npm run frontend:dev     # Start frontend only
+npm run backend:dev      # Start backend only
+npm run electron:dev     # Start desktop app in dev mode
+```
+
+### Building
+```bash
+npm run build            # Build frontend and backend
+npm run package          # Package desktop app for current OS
+npm run package:win      # Package for Windows
+npm run package:mac      # Package for macOS
+npm run package:linux    # Package for Linux
+```
+
+### Code Quality
+```bash
+npm run lint             # Run ESLint
+npm run lint:fix         # Fix ESLint issues
+npm run type-check       # TypeScript type checking
+npm run format           # Format with Prettier
+npm run format:check     # Check formatting
+```
+
+### Testing
+```bash
+npm run test             # Run unit tests
+npm run test:watch       # Run tests in watch mode
+npm run test:coverage    # Generate coverage report
+npm run test:e2e         # Run Playwright E2E tests
+```
+
+### Release
+```bash
+npm run prepare-release  # Lint, type-check, test, and audit
+npm run release          # Full release with electron-builder
+```
+
+## 📝 Core Features
+
+### 1. Patient Care Report Form
+
+Comprehensive form capturing:
+- **Basic Information** - Date, location, call/report numbers
+- **Patient Demographics** - Name, DOB, sex, status
+- **Medical History** - Allergies, medications, conditions
+- **Chief Complaint & Symptoms** - Detailed patient assessment
+- **Treatment Performed** - Interventions and procedures
+- **Vital Signs** - Time-series vital sign tracking
+- **OPQRST Assessment** - Pain evaluation protocol
+- **Transfer of Care** - Handoff documentation
+
+### 2. Interactive Injury Canvas
+
+- Visual body diagram for injury documentation
+- Drawing tools for marking specific injury locations
+- Annotation capabilities for detailed notes
+- Export to PDF with injury visualization
+
+### 3. Oxygen Protocol Tracking
+
+- Protocol-compliant O2 therapy documentation
+- SpO2 target range configuration (COPD/Other)
+- Flow rate alteration tracking
+- Therapy start/end times with reasons
+
+### 4. Draft Management
+
+- Automatic draft saving every 30 seconds
+- Resume incomplete reports from dashboard
+- 24-hour draft retention with automatic cleanup
+- Conflict resolution for concurrent edits
+
+### 5. User Management
+
+- Role-based access control (Admin/User)
+- User creation and modification
+- Activity logging for audit trails
+- Session management with timeout warnings
+
+## 🔒 Security Features
+
+- **JWT Authentication** - Secure token-based authentication
+- **Password Hashing** - bcrypt with salt rounds
+- **Input Validation** - Joi schemas for all API endpoints
+- **XSS Protection** - Sanitized user inputs
+- **CORS Configuration** - Controlled cross-origin access
+- **Rate Limiting** - API request throttling
+- **Helmet.js** - Security headers middleware
+- **Activity Logging** - Complete audit trail
+
+## 🗄️ Database Schema
+
+The application uses SQLite with the following main tables:
+
+- **users** - User accounts and authentication
+- **pcr_reports** - Completed patient care reports
+- **drafts** - Auto-saved draft reports
+- **activity_logs** - System activity audit trail
+
+## 🖥️ Desktop Application
+
+Built with Electron for cross-platform deployment:
+
+- **Windows** - NSIS installer with Start Menu integration
+- **macOS** - DMG with code signing and notarization support
+- **Linux** - AppImage and DEB packages
+
+### Building Desktop Apps
+
+```bash
+# Current platform
+npm run package
+
+# Specific platforms
+npm run package:win
+npm run package:mac
+npm run package:linux
+
+# With code signing
+npm run sign-and-notarize
+```
+
+## 🌐 API Documentation
+
+### Authentication Endpoints
+
+```
+POST /api/auth/login    - User login
+POST /api/auth/logout   - User logout
+GET  /api/auth/check    - Verify authentication
+```
+
+### PCR Endpoints
+
+```
+GET    /api/pcr         - List all reports
+GET    /api/pcr/:id     - Get specific report
+POST   /api/pcr         - Create new report
+PUT    /api/pcr/:id     - Update report
+DELETE /api/pcr/:id     - Delete report
+POST   /api/pcr/draft   - Save draft
+GET    /api/pcr/drafts  - List user drafts
+```
+
+### User Management
+
+```
+GET    /api/users       - List all users (admin)
+POST   /api/users       - Create user (admin)
+PUT    /api/users/:id   - Update user (admin)
+DELETE /api/users/:id   - Delete user (admin)
+```
+
+### Activity Logs
+
+```
+GET    /api/logs        - Get activity logs (admin)
 ```
 
 ## 🧪 Testing
 
-### Test Setup
-- **Vitest** - Fast unit test runner
-- **React Testing Library** - Component testing utilities
-- **Jest DOM** - Custom matchers for DOM testing
+The application includes comprehensive testing:
 
+- **Unit Tests** - Jest with ts-jest for components and services
+- **Integration Tests** - API endpoint testing with Supertest
+- **E2E Tests** - Playwright for user workflow testing
+- **Coverage Reports** - Generated in `/coverage` directory
+
+Run tests:
 ```bash
-# Run tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Generate coverage report
-npm run test:coverage
+npm run test              # Run all tests
+npm run test:watch        # Watch mode
+npm run test:coverage     # Coverage report
+npm run test:e2e          # E2E tests
 ```
 
-## 📦 Build & Deployment
+## 🚢 Deployment
 
-### Build Process
+### Production Build
+
 ```bash
-# Type checking
-npm run type-check
-
-# Linting
-npm run lint
-
-# Production build
+# Build for production
 npm run build
+
+# Serve with PM2 (recommended)
+pm2 start src/backend/dist/index.js --name pcr-backend
+pm2 serve dist 5173 --name pcr-frontend
 ```
 
-### Production Optimizations
-- **Code Splitting** - Lazy-loaded routes and components
-- **Tree Shaking** - Dead code elimination
-- **Asset Optimization** - Minified CSS/JS with gzip compression
-- **Progressive Web App** - Service worker for offline functionality
+### Docker Deployment
 
-## 🔒 Security Features
+```dockerfile
+# Dockerfile example
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 3000 5173
+CMD ["npm", "start"]
+```
 
-### Authentication
-- JWT token storage with expiration
-- Protected routes with automatic redirection
-- Session timeout with warnings
-- Secure logout with token cleanup
+### Environment Variables
 
-### Data Protection
-- Input sanitization to prevent XSS
-- CSRF protection headers
-- Secure local storage handling
-- Form validation on both client and server
+Create a `.env` file in the root directory:
 
-## 🎯 Form Implementation
+```env
+# Server Configuration
+PORT=3000
+NODE_ENV=production
 
-### PCR Form Features
-Based on `form_inputs.md`, the form includes:
+# Database
+DATABASE_PATH=./pcr_database.db
 
-- **Basic Information** (13 fields) - Call details and response times
-- **Patient Information** (10+ fields) - Demographics and contacts  
-- **Medical History** (7 fields) - Clinical assessment data
-- **Treatment Performed** (10+ fields) - Interventions and procedures
-- **OPQRST Assessment** (6 fields) - Pain/symptom evaluation
-- **Injury Canvas** - Interactive body diagram
-- **Vital Signs Tables** - Two separate tables with 6 rows each
-- **Oxygen Protocol** - Comprehensive oxygen therapy documentation
-- **Additional Information** (4 fields) - Transfer and completion details
+# JWT Configuration
+JWT_SECRET=your-secret-key-here
+JWT_EXPIRES_IN=24h
 
-### Form Validation
-- **Required Fields**: 15+ required fields clearly marked
-- **Format Validation**: Time (HH:MM), dates, numbers
-- **Real-time Feedback**: Instant validation with error messages
-- **Progress Tracking**: Visual completion indicators
+# Frontend URL
+CLIENT_URL=http://localhost:5173
 
-## 📋 Available Scripts
-
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run preview      # Preview production build
-npm run lint         # Run ESLint
-npm run type-check   # TypeScript type checking
-npm test             # Run tests
+# Logging
+LOG_LEVEL=info
 ```
 
 ## 🤝 Contributing
 
-### Code Style
-- Use TypeScript for all new code
-- Follow existing naming conventions
-- Add JSDoc comments for complex functions
-- Ensure accessibility compliance
-- Write tests for new components
+Contributions are welcome! Please follow these steps:
 
-### Git Workflow
-1. Create feature branch from `main`
-2. Make changes with descriptive commits
-3. Ensure tests pass and code is linted
-4. Submit pull request with detailed description
-
-## 📄 License
-
-This project is proprietary healthcare software. All rights reserved.
-
-## 🆘 Support
-
-For technical support or feature requests, please contact the development team.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ---
 
-**Built with ❤️ for healthcare professionals**
+**Built with ❤️ for Emergency Medical Services**

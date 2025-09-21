@@ -30,5 +30,6 @@ export class DatabaseManager {
   }
 }
 
-export const db = new DatabaseManager().getDb();
+const dbManager = new DatabaseManager();
+export const db: Database.Database = dbManager.getDb();
 export default db;

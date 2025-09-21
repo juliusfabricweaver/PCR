@@ -1,0 +1,58 @@
+directories:
+  output: dist-electron
+  buildResources: build
+productName: PCR Application
+appId: com.healthcare.pcr-app
+files:
+  - filter:
+      - dist/**/*
+      - electron/**/*
+      - src/backend/**/*
+      - node_modules/**/*
+      - package.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - ia32
+  icon: public/favicon.ico
+nsis:
+  oneClick: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  installerIcon: public/favicon.ico
+  uninstallerIcon: public/favicon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: PCR Application
+mac:
+  category: public.app-category.medical
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  icon: public/favicon.ico
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+dmg:
+  contents:
+    - x: 410
+      'y': 150
+      type: link
+      path: /Applications
+    - x: 130
+      'y': 150
+      type: file
+  title: PCR Application Installer
+linux:
+  category: Office
+  target:
+    - AppImage
+    - deb
+  desktop:
+    Name: PCR Application
+    Comment: Modern Patient Care Report application
+    Categories: Office;Medical;
+electronVersion: 28.3.3

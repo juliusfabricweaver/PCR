@@ -14,15 +14,9 @@ exports.API_ENDPOINTS = {
         REFRESH: '/api/auth/refresh',
         PROFILE: '/api/auth/profile',
     },
-    PATIENTS: {
-        BASE: '/api/patients',
-        BY_ID: (id) => `/api/patients/${id}`,
-        SEARCH: '/api/patients/search',
-    },
     PCR: {
         BASE: '/api/pcr',
         BY_ID: (id) => `/api/pcr/${id}`,
-        BY_PATIENT: (patientId) => `/api/pcr/patient/${patientId}`,
         EXPORT_PDF: (id) => `/api/pcr/${id}/pdf`,
     },
     USERS: {
@@ -34,8 +28,6 @@ exports.ROUTES = {
     HOME: '/',
     LOGIN: '/login',
     DASHBOARD: '/dashboard',
-    PATIENTS: '/patients',
-    PATIENT_DETAIL: '/patients/:id',
     PCR: '/pcr',
     PCR_NEW: '/pcr/new',
     PCR_EDIT: '/pcr/:id/edit',
@@ -47,7 +39,6 @@ exports.ROUTES = {
 exports.STORAGE_KEYS = {
     AUTH_TOKEN: 'pcr_auth_token',
     USER_PREFERENCES: 'pcr_user_preferences',
-    DRAFT_PCR: 'pcr_draft_',
     THEME: 'pcr_theme',
 };
 exports.VALIDATION_RULES = {

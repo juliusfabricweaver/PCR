@@ -4,7 +4,7 @@
     "module": "commonjs",
     "lib": ["ES2020"],
     "outDir": "../../dist/backend",
-    "rootDir": "./src",
+    "rootDir": "../../src",
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -25,7 +25,8 @@
     "noUncheckedIndexedAccess": false
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "../../src/shared/types/**/*"
   ],
   "exclude": [
     "node_modules",

@@ -1,43 +1,9 @@
-export interface Patient {
-    id?: string;
-    firstName: string;
-    lastName: string;
-    dateOfBirth: string;
-    gender: 'male' | 'female' | 'other';
-    ssn?: string;
-    address: Address;
-    emergencyContact: EmergencyContact;
-    medicalHistory?: MedicalHistory[];
-    createdAt?: string;
-    updatedAt?: string;
-}
-export interface Address {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country?: string;
-}
-export interface EmergencyContact {
-    name: string;
-    relationship: string;
-    phoneNumber: string;
-    email?: string;
-}
-export interface MedicalHistory {
-    condition: string;
-    diagnosis: string;
-    medications: string[];
-    allergies: string[];
-    notes?: string;
-}
 export interface PCRReport {
     id?: string;
-    patientId: string;
     incidentNumber: string;
     date: string;
     time: string;
-    location: Address;
+    location: string;
     chiefComplaint: string;
     presentIllness: string;
     assessment: Assessment;
@@ -144,6 +110,20 @@ export interface PaginatedResponse<T> {
     page: number;
     limit: number;
     totalPages: number;
+}
+export interface ActivityLog {
+    id: string;
+    user_id: string;
+    username?: string;
+    first_name?: string;
+    last_name?: string;
+    action: string;
+    resource_type?: string;
+    resource_id?: string;
+    details?: string;
+    ip_address?: string;
+    user_agent?: string;
+    created_at: string;
 }
 export interface ValidationError {
     field: string;
