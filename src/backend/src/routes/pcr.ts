@@ -48,7 +48,7 @@ router.get('/:id', authenticateToken, (req: AuthenticatedRequest, res: Response)
     const report = db.prepare(`
       SELECT * FROM pcr_reports
       WHERE id = ? AND created_by = ?
-    `).get(id, req.user!.id);
+    `).get(id, req.user!.id) as any;
 
     if (!report) {
       return res.status(404).json({ success: false, message: 'PCR report not found' });
@@ -87,7 +87,7 @@ router.post('/', authenticateToken, logActivity('create_pcr', 'pcr_report'), (re
       VALUES (?, ?, ?, ?)
     `).run(reportId, JSON.stringify(form_data), status, req.user!.id);
 
-    const newReport = db.prepare('SELECT * FROM pcr_reports WHERE id = ?').get(reportId);
+    const newReport = db.prepare('SELECT * FROM pcr_reports WHERE id = ?').get(reportId) as any;
 
     res.status(201).json({
       success: true,
@@ -143,7 +143,7 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
     `).run(...updateValues);
 
     // Get updated report
-    const updatedReport = db.prepare('SELECT * FROM pcr_reports WHERE id = ?').get(id);
+    const updatedReport = db.prepare('SELECT * FROM pcr_reports WHERE id = ?').get(id) as any;
 
     res.json({
       success: true,
@@ -164,12 +164,12 @@ router.delete('/:id', authenticateToken, logActivity('delete_pcr', 'pcr_report')
   try {
     const { id } = req.params;
 
-    // Load report (don’t filter by created_by here so admins can act too)
+    // Load report (don't filter by created_by here so admins can act too)
     const report = db.prepare(`
       SELECT id, status, created_by
       FROM pcr_reports
       WHERE id = ?
-    `).get(id);
+    `).get(id) as any;
 
     if (!report) {
       return res.status(404).json({ success: false, message: 'PCR report not found' });

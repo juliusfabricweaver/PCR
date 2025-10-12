@@ -6,29 +6,38 @@ const DB_PATH = path.join(process.cwd(), 'pcr_database.db');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
 export class DatabaseManager {
-  private db: Database.Database;
+  private database: Database.Database;
 
   constructor() {
-    this.db = new Database(DB_PATH);
-    this.db.pragma('journal_mode = WAL');
-    this.db.pragma('synchronous = NORMAL');
-    this.db.pragma('foreign_keys = ON');
+    this.database = new Database(DB_PATH);
+    this.database.pragma('journal_mode = WAL');
+    this.database.pragma('synchronous = NORMAL');
+    this.database.pragma('foreign_keys = ON');
     this.initializeSchema();
   }
 
   private initializeSchema(): void {
     const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
-    this.db.exec(schema);
+    this.database.exec(schema);
   }
 
   getDb(): Database.Database {
-    return this.db;
+    return this.database;
   }
 
   close(): void {
-    this.db.close();
+    this.database.close();
   }
 }
 
-export const db = new DatabaseManager().getDb();
+// Create and export manager instance to avoid direct Database type export
+const dbManager = new DatabaseManager();
+
+// Export the database through a function to avoid type export issues
+export function getDatabase(): Database.Database {
+  return dbManager.getDb();
+}
+
+// For backwards compatibility, export a db object with explicit type
+const db: any = dbManager.getDb();
 export default db;
