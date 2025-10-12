@@ -83,10 +83,6 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# NW.js build artifacts
-nwjs-build/
-nwjs-cache/
-
 # Database files
 *.db
 *.sqlite

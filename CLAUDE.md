@@ -17,12 +17,6 @@ npm run backend:dev
 
 # Build for production
 npm run build
-
-# Run NW.js desktop app
-npm run nw
-
-# Package desktop app for current platform
-npm run package
 ```
 
 ### Code Quality
@@ -57,10 +51,9 @@ npm run create-accounts
 
 ## Architecture Overview
 
-This is a **hybrid desktop/web PCR (Patient Care Report) application** built with:
+This is a **web-based PCR (Patient Care Report) application** built with:
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
 - **Backend**: Express.js + TypeScript + SQLite (better-sqlite3)
-- **Desktop**: NW.js for native desktop packaging
 - **Canvas**: Fabric.js for interactive injury diagrams
 
 ### Key Architecture Patterns
@@ -137,16 +130,9 @@ src/
 
 ## Build & Deployment
 
-### NW.js Desktop App
-- Cross-platform desktop packaging via nw-builder
-- Build configuration in `nwbuild.config.js`
-- Supports Windows, macOS, and Linux distributions
-- Window configuration in `package.json` under "window" key
-
 ### Production Build
 1. `npm run build` - Builds both frontend and backend
-2. `npm run package` - Creates desktop app package
-3. `npm run release` - Full release pipeline with signing/notarization
+2. Deploy the built files to your web server or hosting platform
 
 ## Database Schema
 

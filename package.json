@@ -1,9 +1,7 @@
 {
   "name": "pcr-application",
   "version": "1.0.0",
-  "description": "Modern Patient Care Report application built with React and NW.js",
-  "main": "main.js",
-  "homepage": "index.html",
+  "description": "Modern Patient Care Report web application built with React and TypeScript",
   "scripts": {
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
     "frontend:dev": "vite",
@@ -12,16 +10,6 @@
     "backend:build": "tsc -p src/backend/tsconfig.json",
     "create-accounts": "ts-node src/backend/src/scripts/create-users.ts",
     "build": "npm run frontend:build && npm run backend:build",
-    "nw": "nw .",
-    "nw:dev": "npm run build && nw .",
-    "package": "npm run build && nwbuild --config-file=nwbuild.config.js",
-    "package:dev": "npm run build && nwbuild --config-file=nwbuild.config.js --mode=dev",
-    "package:all": "npm run build && nwbuild --config-file=nwbuild.config.js --platforms=win64,osx64,linux64",
-    "create-installers": "node scripts/create-installers.js",
-    "create-installers:all": "node scripts/create-installers.js --all",
-    "sign-and-notarize": "node scripts/sign-and-notarize.js",
-    "sign-and-notarize:all": "node scripts/sign-and-notarize.js --all",
-    "release": "npm run package:all && npm run create-installers:all && npm run sign-and-notarize:all",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -40,29 +28,10 @@
     "ems",
     "medical",
     "react",
-    "nwjs",
     "typescript"
   ],
   "author": "Your Name",
   "license": "MIT",
-  "window": {
-    "title": "PCR Application",
-    "icon": "public/favicon.ico",
-    "toolbar": false,
-    "frame": true,
-    "width": 1200,
-    "height": 800,
-    "min_width": 800,
-    "min_height": 600,
-    "resizable": true,
-    "show_in_taskbar": true,
-    "position": "center"
-  },
-  "webkit": {
-    "plugin": false
-  },
-  "node-remote": "http://localhost:5173",
-  "chromium-args": "--disable-web-security --allow-file-access-from-files --enable-node-worker",
   "devDependencies": {
     "@playwright/test": "^1.40.0",
     "@types/bcrypt": "^5.0.0",
@@ -88,8 +57,6 @@
     "jest": "^29.7.0",
     "jest-environment-node": "^29.7.0",
     "nodemon": "^3.0.2",
-    "nw": "^0.83.0",
-    "nw-builder": "^4.7.1",
     "postcss": "^8.4.32",
     "prettier": "^3.1.1",
     "supertest": "^6.3.3",
@@ -129,33 +96,6 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
-  },
-  "build": {
-    "productName": "PCR Application",
-    "appId": "com.healthcare.pcr-app",
-    "directories": {
-      "output": "build"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
-    "mac": {
-      "category": "public.app-category.medical",
-      "hardenedRuntime": true,
-      "entitlements": "build-assets/entitlements.plist",
-      "entitlementsInherit": "build-assets/entitlements.plist"
-    },
-    "linux": {
-      "category": "Office",
-      "desktop": {
-        "Name": "PCR Application",
-        "Comment": "Modern Patient Care Report application",
-        "Categories": "Office;Medical;"
-      }
-    }
   },
   "jest": {
     "preset": "ts-jest",
