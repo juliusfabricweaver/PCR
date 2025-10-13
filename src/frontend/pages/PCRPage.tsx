@@ -18,6 +18,7 @@ import { useNotification } from '../context/NotificationContext'
 import { useAuth } from '../context/AuthContext'
 import { cn, getCurrentTime, formatDate } from '../utils'
 import { pdfService } from '../services/pdf.service'
+import { apiRequest } from '../utils/api'
 import type { PCRFormData, VitalSign, VitalSigns2 } from '../types'
 
 const PCRPage: React.FC = () => {
@@ -41,18 +42,7 @@ const PCRPage: React.FC = () => {
         setCurrentDraftId(draftId)
 
         try {
-          const response = await fetch(`/api/pcr/${draftId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          })
-
-          if (!response.ok) {
-            throw new Error('Failed to load draft')
-          }
-
-          const data = await response.json()
+          const data = await apiRequest(`/pcr/${draftId}`)
           const draftData = data.data
 
           if (draftData.status === 'draft') {
@@ -96,15 +86,11 @@ const PCRPage: React.FC = () => {
         if (confirmed) {
           try {
             // Update existing draft or create new submission
-            const url = currentDraftId ? `/api/pcr/${currentDraftId}` : '/api/submissions'
+            const url = currentDraftId ? `/pcr/${currentDraftId}` : '/submissions'
             const method = currentDraftId ? 'PUT' : 'POST'
 
-            const response = await fetch(url, {
+            await apiRequest(url, {
               method,
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
               body: JSON.stringify(
                 currentDraftId
                   ? {
@@ -124,10 +110,6 @@ const PCRPage: React.FC = () => {
                     }
               )
             })
-
-            if (!response.ok) {
-              throw new Error('Failed to submit PCR form')
-            }
 
             showNotification(
               currentDraftId
@@ -178,26 +160,16 @@ const PCRPage: React.FC = () => {
 
     try {
       // If we're editing an existing draft, update it. Otherwise create new draft.
-      const url = currentDraftId ? `/api/pcr/${currentDraftId}` : '/api/pcr'
+      const url = currentDraftId ? `/pcr/${currentDraftId}` : '/pcr'
       const method = currentDraftId ? 'PUT' : 'POST'
 
-      const response = await fetch(url, {
+      const responseData = await apiRequest(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({
           form_data: data,
           status: 'draft'
         })
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to save draft')
-      }
-
-      const responseData = await response.json()
 
       // If this was a new draft, update our current draft ID
       if (!currentDraftId && responseData.data?.id) {

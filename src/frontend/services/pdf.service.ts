@@ -453,10 +453,10 @@ export class PDFService {
    */
   private addHeader(pdf: jsPDF, options: Required<PDFOptions>, yPosition: number): number {
     const pageWidth = pdf.internal.pageSize.getWidth()
-    
+
     // Title with logo aligned together
-    const logoPath = '/images/vcrt_logo.png' // path from public
-    const logoSize = 8                       // square logo 
+    const logoPath = './images/vcrt_logo.png' // relative path for Electron compatibility
+    const logoSize = 8                       // square logo
     const x = options.margins.left
     const y = yPosition                      // baseline for alignment
 

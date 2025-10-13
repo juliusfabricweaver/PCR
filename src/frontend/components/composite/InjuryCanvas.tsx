@@ -121,7 +121,8 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
       setIsImageLoaded(true)
       redrawCanvas()
     }
-    img.src = '/images/front_image.jpg'
+    // Use relative path for Electron compatibility
+    img.src = './images/front_image.jpg'
 
   }, [width, height])
 

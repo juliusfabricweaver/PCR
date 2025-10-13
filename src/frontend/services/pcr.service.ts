@@ -30,6 +30,32 @@ interface PCRReport {
 
 export class PCRService {
   private baseUrl: string = '/api'
+  private initialized: boolean = false
+
+  /**
+   * Initialize the service with the correct base URL for the environment
+   */
+  private async initialize(): Promise<void> {
+    if (this.initialized) return
+
+    // Check if running in Electron
+    if (window.electronAPI) {
+      try {
+        const port = await window.electronAPI.getServerPort()
+        this.baseUrl = `http://localhost:${port}/api`
+        console.log(`Electron mode: API base URL set to ${this.baseUrl}`)
+      } catch (error) {
+        console.error('Failed to get Electron server port:', error)
+        // Fall back to default
+        this.baseUrl = '/api'
+      }
+    } else {
+      // Web mode - use relative path or environment variable
+      this.baseUrl = '/api'
+    }
+
+    this.initialized = true
+  }
 
   /**
    * Get authentication token from localStorage
@@ -42,6 +68,9 @@ export class PCRService {
    * Make authenticated request
    */
   private async makeRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
+    // Ensure service is initialized
+    await this.initialize()
+
     const token = this.getAuthToken()
 
     const response = await fetch(url, {

@@ -14,7 +14,12 @@ import './database';
 import { cleanupService } from './services/cleanup';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+
+// Electron environment detection
+const isElectron = process.env.IS_ELECTRON === 'true';
+
+// Use dynamic port in Electron (0 = random available port), fixed port otherwise
+const PORT = isElectron ? 0 : (process.env.PORT || 3000);
 
 // Middleware
 app.use(helmet({
@@ -22,10 +27,13 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
-  credentials: true
-}));
+// CORS: Disable in Electron (not needed), enable for web
+if (!isElectron) {
+  app.use(cors({
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    credentials: true
+  }));
+}
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -89,10 +97,16 @@ app.use((req: express.Request, res: express.Response) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 PCR API Server running on port ${PORT}`);
+const server = app.listen(PORT, () => {
+  const actualPort = (server.address() as any).port;
+  console.log(`🚀 PCR API Server running on port ${actualPort}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🔗 Health check: http://localhost:${actualPort}/api/health`);
+
+  // Notify Electron main process of server port if running in Electron
+  if (isElectron && process.send) {
+    process.send({ type: 'server-ready', port: actualPort });
+  }
 
   // Start cleanup service
   cleanupService.start();

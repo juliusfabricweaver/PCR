@@ -57,7 +57,7 @@ router.post('/', authenticateToken, requireRole(['admin']), logActivity('create_
     const newUser = db.prepare(`
       SELECT id, username, first_name, last_name, role, is_active, created_at
       FROM users WHERE id = ?
-    `).get(userId);
+    `).get(userId) as any;
 
     const userData = {
       id: newUser.id,
@@ -67,7 +67,7 @@ router.post('/', authenticateToken, requireRole(['admin']), logActivity('create_
       role: newUser.role,
       isActive: newUser.is_active,
       createdAt: newUser.created_at,
-      lastLogin: null
+      lastLogin: null as string | null
     };
 
     res.status(201).json({
@@ -98,10 +98,10 @@ router.get('/', authenticateToken, requireRole(['admin']), (req: AuthenticatedRe
     query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit as string), parseInt(offset as string));
 
-    const users = db.prepare(query).all(...params);
+    const users = db.prepare(query).all(...params) as any[];
 
     // Transform to match frontend expectations
-    const transformedUsers = users.map(user => ({
+    const transformedUsers = users.map((user: any) => ({
       id: user.id,
       username: user.username,
       firstName: user.first_name,
@@ -136,7 +136,7 @@ router.get('/:id', authenticateToken, (req: AuthenticatedRequest, res: Response)
     const user = db.prepare(`
       SELECT id, username, first_name, last_name, role, is_active, created_at, last_login
       FROM users WHERE id = ?
-    `).get(id);
+    `).get(id) as any;
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -227,7 +227,7 @@ router.put('/:id', authenticateToken, logActivity('update_user', 'user'), (req: 
     const updatedUser = db.prepare(`
       SELECT id, username, first_name, last_name, role, is_active, created_at, updated_at, last_login
       FROM users WHERE id = ?
-    `).get(id);
+    `).get(id) as any;
 
     const userData = {
       id: updatedUser.id,
@@ -270,7 +270,7 @@ router.delete(
       // Fetch target
       const target = db
         .prepare('SELECT id, username, role FROM users WHERE id = ?')
-        .get(id);
+        .get(id) as any;
 
       if (!target) {
         return res.status(404).json({ success: false, message: 'User not found' });
@@ -279,9 +279,9 @@ router.delete(
       // Do not allow deleting admins (or at least the last admin)
       if (String(target.role).toLowerCase() === 'admin') {
         // If you want to allow deleting admins except the last one, use this block:
-        const adminCount = db
+        const adminCount = (db
           .prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'admin'")
-          .get().c as number;
+          .get() as any).c as number;
 
         if (adminCount <= 1) {
           return res.status(400).json({ success: false, message: 'Cannot delete the last admin user.' });
@@ -335,7 +335,7 @@ router.post('/:id/change-password', authenticateToken, logActivity('change_passw
     }
 
     // Get user
-    const user = db.prepare('SELECT id, password_hash FROM users WHERE id = ?').get(id);
+    const user = db.prepare('SELECT id, password_hash FROM users WHERE id = ?').get(id) as any;
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });

@@ -6,6 +6,7 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [react()],
   root: 'src/frontend',
+  base: './', // Use relative paths for Electron
   build: {
     outDir: '../../dist/frontend',
     emptyOutDir: true,

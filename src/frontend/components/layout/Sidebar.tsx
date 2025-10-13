@@ -129,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Logo area */}
           <div className="flex items-center h-16 px-4 border-b border-gray-200 dark:border-gray-700">
             <img
-              src="/images/vcrt_logo.png"
+              src="./images/vcrt_logo.png"
               alt="PCR logo"
               className="h-6 md:h-8 w-auto object-contain rounded-md"
             />

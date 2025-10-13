@@ -87,6 +87,25 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState)
+  const [apiBaseUrl, setApiBaseUrl] = React.useState<string>('/api')
+
+  // Initialize API base URL for Electron
+  useEffect(() => {
+    const initializeApiUrl = async () => {
+      if (window.electronAPI) {
+        try {
+          const port = await window.electronAPI.getServerPort()
+          const baseUrl = `http://localhost:${port}/api`
+          setApiBaseUrl(baseUrl)
+          console.log(`Electron mode: API base URL set to ${baseUrl}`)
+        } catch (error) {
+          console.error('Failed to get Electron server port:', error)
+          setApiBaseUrl('/api')
+        }
+      }
+    }
+    initializeApiUrl()
+  }, [])
 
   // Clear stored authentication data
   const clearStoredAuth = useCallback(() => {
@@ -148,7 +167,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       // Call actual backend API
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${apiBaseUrl}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -205,7 +224,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Invalidate session on backend
       const token = localStorage.getItem('pcr_token')
       if (token) {
-        await fetch('/api/auth/logout', {
+        await fetch(`${apiBaseUrl}/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -225,7 +244,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     draftKeys.forEach(key => localStorage.removeItem(key))
 
     dispatch({ type: 'LOGOUT' })
-  }, [clearStoredAuth])
+  }, [clearStoredAuth, apiBaseUrl])
 
   // Extend session
   const extendSession = useCallback(async (): Promise<void> => {

@@ -83,10 +83,6 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# NW.js build artifacts
-nwjs-build/
-nwjs-cache/
-
 # Database files
 *.db
 *.sqlite
@@ -100,3 +96,19 @@ data/
 # Temporary files
 tmp/
 temp/
+
+# Electron build outputs
+release/
+out/
+*.app
+*.exe
+*.dmg
+*.zip
+*.AppImage
+
+# Electron assets (icons generated from source)
+assets/
+
+# Compiled Electron files (keep source .ts files)
+electron/*.js
+electron/*.js.map

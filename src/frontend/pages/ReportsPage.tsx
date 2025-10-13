@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Loading, Alert } from '@/components/ui'
 import { pdfService } from '@/services/pdf.service'
 import { useAuth } from '@/context/AuthContext'
+import { apiRequest } from '@/utils/api'
 
 interface PCRReport {
   id: string
@@ -31,18 +32,7 @@ const ReportsPage = () => {
         return
       }
 
-      const response = await fetch('/api/pcr', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch reports')
-      }
-
-      const data = await response.json()
+      const data = await apiRequest('/pcr')
       setReports(data.data || [])
     } catch (err) {
       setError('Failed to load PCR reports')
@@ -59,18 +49,7 @@ const ReportsPage = () => {
         return
       }
 
-      const response = await fetch(`/api/pcr/${reportId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch report details')
-      }
-
-      const data = await response.json()
+      const data = await apiRequest(`/pcr/${reportId}`)
       const reportData = data.data
 
       // Show PDF preview using the existing PDF service
@@ -98,16 +77,7 @@ const ReportsPage = () => {
         return
       }
 
-      const res = await fetch(`/api/pcr/${reportId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body?.message || 'Failed to delete report')
+      await apiRequest(`/pcr/${reportId}`, { method: 'DELETE' })
 
       // Optimistic UI: remove from state
       setReports(prev => prev.filter(r => r.id !== reportId))

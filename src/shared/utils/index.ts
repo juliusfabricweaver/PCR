@@ -1,4 +1,4 @@
-import { ValidationError, VALIDATION_RULES } from '../types'
+import { ValidationError } from '../types'
 import { VALIDATION_RULES as RULES } from '../constants'
 
 // Date utilities
@@ -218,25 +218,31 @@ export const pick = <T extends Record<string, any>, K extends keyof T>(
 }
 
 // Storage utilities (for localStorage/sessionStorage)
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+
 export const storage = {
   get: (key: string): any => {
+    if (!isBrowser) return null;
     try {
-      const item = localStorage.getItem(key)
+      const item = window.localStorage.getItem(key)
       return item ? JSON.parse(item) : null
     } catch {
       return null
     }
   },
   set: (key: string, value: any): void => {
+    if (!isBrowser) return;
     try {
-      localStorage.setItem(key, JSON.stringify(value))
+      window.localStorage.setItem(key, JSON.stringify(value))
     } catch (error) {
       console.error('Failed to save to localStorage:', error)
     }
   },
   remove: (key: string): void => {
+    if (!isBrowser) return;
     try {
-      localStorage.removeItem(key)
+      window.localStorage.removeItem(key)
     } catch (error) {
       console.error('Failed to remove from localStorage:', error)
     }

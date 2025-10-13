@@ -26,10 +26,36 @@ export class SessionService {
   private authToken: string | null = null
   private sessionId: string | null = null
   private deviceId: string
+  private initialized: boolean = false
 
   constructor(baseUrl: string = '/api') {
     this.baseUrl = baseUrl
     this.deviceId = this.generateDeviceId()
+  }
+
+  /**
+   * Initialize the service with the correct base URL for the environment
+   */
+  private async initialize(): Promise<void> {
+    if (this.initialized) return
+
+    // Check if running in Electron
+    if (window.electronAPI) {
+      try {
+        const port = await window.electronAPI.getServerPort()
+        this.baseUrl = `http://localhost:${port}/api`
+        console.log(`Electron mode: Session API base URL set to ${this.baseUrl}`)
+      } catch (error) {
+        console.error('Failed to get Electron server port:', error)
+        // Fall back to default
+        this.baseUrl = '/api'
+      }
+    } else {
+      // Web mode - use relative path or environment variable
+      this.baseUrl = '/api'
+    }
+
+    this.initialized = true
   }
 
   /**
@@ -306,6 +332,9 @@ export class SessionService {
    * Make HTTP request with error handling
    */
   private async makeRequest<T = any>(url: string, options: RequestInit = {}): Promise<T> {
+    // Ensure service is initialized
+    await this.initialize()
+
     try {
       const response = await fetch(url, {
         ...options,
