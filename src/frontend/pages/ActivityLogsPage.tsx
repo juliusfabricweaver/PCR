@@ -3,6 +3,7 @@ import { History, Filter, Calendar, User, Activity, RefreshCw, ChevronLeft, Chev
 import { Button, Loading, Alert } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
+import { apiRequest } from '@/utils/api'
 import type { ActivityLog, PaginatedResponse } from '@/types'
 
 interface LogFilters {
@@ -59,18 +60,7 @@ const ActivityLogsPage = () => {
       if (filters.dateFrom) queryParams.append('dateFrom', filters.dateFrom)
       if (filters.dateTo) queryParams.append('dateTo', filters.dateTo)
 
-      const response = await fetch(`/api/logs?${queryParams.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch activity logs')
-      }
-
-      const data: PaginatedResponse<ActivityLog> = await response.json()
+      const data: PaginatedResponse<ActivityLog> = await apiRequest(`/logs?${queryParams.toString()}`)
       setLogs(data.items || [])
       setTotalPages(data.totalPages || 1)
       setTotalCount(data.totalCount || 0)

@@ -2,6 +2,7 @@
   "name": "pcr-application",
   "version": "1.0.0",
   "description": "Modern Patient Care Report web application built with React and TypeScript",
+  "main": "dist/electron/main.js",
   "scripts": {
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
     "frontend:dev": "vite",
@@ -20,7 +21,15 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,css,md}\"",
     "type-check": "tsc --noEmit",
     "security-audit": "npm audit --audit-level=moderate",
-    "prepare-release": "npm run lint && npm run type-check && npm run test && npm run security-audit"
+    "prepare-release": "npm run lint && npm run type-check && npm run test && npm run security-audit",
+    "electron:build": "tsc -p electron/tsconfig.json",
+    "electron:rebuild": "electron-rebuild -f -w better-sqlite3,bcrypt,canvas",
+    "electron:dev": "npm run electron:build && electron .",
+    "electron:start": "concurrently \"npm run frontend:dev\" \"npm run electron:dev\"",
+    "electron:package": "npm run build && npm run electron:build && electron-builder",
+    "electron:package:mac": "npm run build && npm run electron:build && electron-builder --mac",
+    "electron:package:win": "npm run build && npm run electron:build && electron-builder --win",
+    "electron:package:linux": "npm run build && npm run electron:build && electron-builder --linux"
   },
   "keywords": [
     "pcr",
@@ -33,6 +42,7 @@
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
     "@playwright/test": "^1.40.0",
     "@types/bcrypt": "^5.0.0",
     "@types/better-sqlite3": "^7.6.13",
@@ -50,6 +60,8 @@
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.16",
     "concurrently": "^8.2.2",
+    "electron": "^32.3.3",
+    "electron-builder": "^25.1.8",
     "eslint": "^8.55.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
@@ -96,6 +108,61 @@
   "engines": {
     "node": ">=23.0.0",
     "npm": ">=10.0.0"
+  },
+  "build": {
+    "appId": "com.pcr.application",
+    "productName": "PCR Application",
+    "copyright": "Copyright © 2025",
+    "npmRebuild": true,
+    "buildDependenciesFromSource": true,
+    "asarUnpack": [
+      "**/node_modules/**/*",
+      "**/dist/backend/**/*",
+      "**/initial_database.db"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "src/backend/src/database/schema.sql",
+      "initial_database.db"
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.medical",
+      "icon": "assets/icon.icns",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/icon-256.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Office"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "jest": {
     "preset": "ts-jest",

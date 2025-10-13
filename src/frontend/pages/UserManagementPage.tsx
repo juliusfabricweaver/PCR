@@ -3,6 +3,7 @@ import { Plus, UserCog, Shield, User as UserIcon, Edit, Trash2 } from 'lucide-re
 import { Button, Loading, Alert, Modal } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
+import { apiRequest } from '@/utils/api'
 import type { User } from '@/types'
 
 interface CreateUserForm {
@@ -65,18 +66,7 @@ const UserManagementPage = () => {
         return
       }
 
-      const response = await fetch('/api/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch users')
-      }
-
-      const data = await response.json()
+      const data = await apiRequest('/users')
       setUsers(data.data || [])
     } catch (err) {
       setError('Failed to load users')
@@ -119,20 +109,10 @@ const UserManagementPage = () => {
     try {
       setCreating(true)
 
-      const response = await fetch('/api/users', {
+      await apiRequest('/users', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(createForm),
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create user')
-      }
 
       await fetchUsers()
       setShowCreateModal(false)
@@ -154,20 +134,12 @@ const UserManagementPage = () => {
 
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      const response = await fetch(`/api/users/${userId}`, {
+      await apiRequest(`/users/${userId}`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           isActive: !currentStatus
         }),
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to update user status')
-      }
 
       await fetchUsers()
     } catch (err) {
@@ -181,7 +153,6 @@ const UserManagementPage = () => {
     setEditForm({
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role as 'user' | 'admin',
       isActive: user.isActive
     })
     setEditFormErrors({})
@@ -198,18 +169,9 @@ const UserManagementPage = () => {
     if (!sure) return
 
     try {
-      const res = await fetch(`/api/users/${userId}`, {
+      await apiRequest(`/users/${userId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
       })
-
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        throw new Error(body?.message || 'Failed to delete user')
-      }
 
       setShowEditModal(false)
       setEditingUser(null)
@@ -241,20 +203,10 @@ const UserManagementPage = () => {
     try {
       setUpdating(true)
 
-      const response = await fetch(`/api/users/${editingUser.id}`, {
+      await apiRequest(`/users/${editingUser.id}`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(editForm),
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to update user')
-      }
 
       await fetchUsers()
       setShowEditModal(false)
@@ -262,7 +214,6 @@ const UserManagementPage = () => {
       setEditForm({
         firstName: '',
         lastName: '',
-        role: 'user',
         isActive: true
       })
       setEditFormErrors({})

@@ -2,7 +2,11 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-const DB_PATH = path.join(process.cwd(), 'pcr_database.db');
+// Electron environment detection
+const isElectron = process.env.IS_ELECTRON === 'true';
+
+// Database path: Use env var if in Electron, otherwise use current working directory
+const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), 'pcr_database.db');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
 export class DatabaseManager {

@@ -41,7 +41,7 @@ const Header: React.FC<HeaderProps> = ({
 
           <div className="flex items-center space-x-3">
             <img
-              src="/images/vcrt_logo.png"
+              src="./images/vcrt_logo.png"
               alt="PCR logo"
               className="h-8 md:h-10 w-auto object-contain rounded-md"
             />

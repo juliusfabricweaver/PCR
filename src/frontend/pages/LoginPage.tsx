@@ -63,7 +63,7 @@ const LoginPage: React.FC = () => {
           {/* Logo column (far left) */}
           <div className="flex justify-start">
             <img
-              src="/images/vcrt_logo.png"
+              src="./images/vcrt_logo.png"
               alt="PCR System"
               className="h-48 xl:h-56 w-auto object-contain drop-shadow-sm"
             />

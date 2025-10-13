@@ -18,11 +18,10 @@ async function createDefaultUsers() {
 
       db.prepare(`
         INSERT INTO users (id, username, password_hash, first_name, last_name, role, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(
         generateId('user'),
         'admin',
-        'admin@pcrapp.com',
         adminPasswordHash,
         'System',
         'Administrator',
@@ -43,11 +42,10 @@ async function createDefaultUsers() {
 
       db.prepare(`
         INSERT INTO users (id, username, password_hash, first_name, last_name, role, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(
         generateId('user'),
         'user',
-        'user@pcrapp.com',
         userPasswordHash,
         'Regular',
         'User',

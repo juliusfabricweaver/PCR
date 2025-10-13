@@ -96,3 +96,19 @@ data/
 # Temporary files
 tmp/
 temp/
+
+# Electron build outputs
+release/
+out/
+*.app
+*.exe
+*.dmg
+*.zip
+*.AppImage
+
+# Electron assets (icons generated from source)
+assets/
+
+# Compiled Electron files (keep source .ts files)
+electron/*.js
+electron/*.js.map
