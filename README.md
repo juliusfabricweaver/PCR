@@ -144,8 +144,6 @@ After running `npm run create-accounts`:
 - **Admin**: username: `admin`, password: `admin`
 - **User**: username: `user`, password: `user`
 
-**⚠️ Change these passwords in production!**
-
 ## 💾 Database
 
 ### Location
@@ -377,11 +375,6 @@ npm run electron:package:linux
 3. Run `npm run prepare-release` before committing
 4. Submit PR with description of changes
 5. Ensure all checks pass
-
-## 📝 License
-
-This project is proprietary healthcare software for the University of Ottawa VCRT.
-All rights reserved.
 
 ## 🆘 Support
 
