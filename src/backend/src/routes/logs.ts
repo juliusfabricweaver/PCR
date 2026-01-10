@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { authenticateToken, requireRole, AuthenticatedRequest } from '../middleware/auth'
 import db from '../database'
-import { ActivityLog, PaginatedResponse, PaginationParams } from '../../../shared/types'
+import { ActivityLog, PaginatedResponse } from '../../../shared/types'
 
 const router = Router()
 
@@ -14,16 +14,17 @@ router.get('/', authenticateToken, requireRole(['admin']), (req: AuthenticatedRe
       sortOrder = 'desc',
       action,
       user_id,
+      username, // ✅ OPTION 2: add username filter
       dateFrom,
-      dateTo
+      dateTo,
     } = req.query
 
-    const pageNum = parseInt(page as string)
-    const limitNum = parseInt(limit as string)
+    const pageNum = parseInt(page as string, 10)
+    const limitNum = parseInt(limit as string, 10)
     const offset = (pageNum - 1) * limitNum
 
-    let whereConditions = []
-    let queryParams = []
+    const whereConditions: string[] = []
+    const queryParams: any[] = []
 
     if (action) {
       whereConditions.push('al.action = ?')
@@ -33,6 +34,11 @@ router.get('/', authenticateToken, requireRole(['admin']), (req: AuthenticatedRe
     if (user_id) {
       whereConditions.push('al.user_id = ?')
       queryParams.push(user_id)
+    }
+
+    if (username) {
+      whereConditions.push('u.username = ?')
+      queryParams.push(username)
     }
 
     if (dateFrom) {
@@ -47,22 +53,25 @@ router.get('/', authenticateToken, requireRole(['admin']), (req: AuthenticatedRe
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
 
-    const validSortColumns = ['created_at', 'action', 'username']
-    const sortColumn = validSortColumns.includes(sortBy as string) ? sortBy : 'created_at'
+    const sortMap: Record<string, string> = {
+      created_at: 'al.created_at',
+      action: 'al.action',
+      username: 'u.username',
+    }
+    const sortExpr = sortMap[String(sortBy)] ?? 'al.created_at'
     const sortDirection = sortOrder === 'asc' ? 'ASC' : 'DESC'
 
-    // Get total count
+    // Get total count (same WHERE, same JOIN)
     const countQuery = `
       SELECT COUNT(*) as total
       FROM activity_logs al
       LEFT JOIN users u ON al.user_id = u.id
       ${whereClause}
     `
-
     const countResult = db.prepare(countQuery).get(...queryParams) as { total: number }
     const totalCount = countResult.total
 
-    // Get paginated logs with user information
+    // Get paginated logs with user info
     const logsQuery = `
       SELECT
         al.id,
@@ -80,19 +89,19 @@ router.get('/', authenticateToken, requireRole(['admin']), (req: AuthenticatedRe
       FROM activity_logs al
       LEFT JOIN users u ON al.user_id = u.id
       ${whereClause}
-      ORDER BY al.${sortColumn} ${sortDirection}
+      ORDER BY ${sortExpr} ${sortDirection}
       LIMIT ? OFFSET ?
     `
 
-    queryParams.push(limitNum, offset)
-    const logs = db.prepare(logsQuery).all(...queryParams) as ActivityLog[]
+    const logsParams = [...queryParams, limitNum, offset]
+    const logs = db.prepare(logsQuery).all(...logsParams) as ActivityLog[]
 
     const response: PaginatedResponse<ActivityLog> = {
       items: logs,
       totalCount,
       page: pageNum,
       limit: limitNum,
-      totalPages: Math.ceil(totalCount / limitNum)
+      totalPages: Math.ceil(totalCount / limitNum),
     }
 
     res.json(response)
@@ -107,8 +116,8 @@ router.get('/stats', authenticateToken, requireRole(['admin']), (req: Authentica
   try {
     const { dateFrom, dateTo } = req.query
 
-    let whereConditions = []
-    let queryParams = []
+    const whereConditions: string[] = []
+    const queryParams: any[] = []
 
     if (dateFrom) {
       whereConditions.push('created_at >= ?')
@@ -122,7 +131,6 @@ router.get('/stats', authenticateToken, requireRole(['admin']), (req: Authentica
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
 
-    // Get action counts
     const actionStatsQuery = `
       SELECT action, COUNT(*) as count
       FROM activity_logs
@@ -130,10 +138,8 @@ router.get('/stats', authenticateToken, requireRole(['admin']), (req: Authentica
       GROUP BY action
       ORDER BY count DESC
     `
-
     const actionStats = db.prepare(actionStatsQuery).all(...queryParams)
 
-    // Get user activity counts
     const userStatsQuery = `
       SELECT
         al.user_id,
@@ -148,10 +154,8 @@ router.get('/stats', authenticateToken, requireRole(['admin']), (req: Authentica
       ORDER BY activity_count DESC
       LIMIT 10
     `
-
     const userStats = db.prepare(userStatsQuery).all(...queryParams)
 
-    // Get recent activity summary
     const recentActivityQuery = `
       SELECT
         DATE(created_at) as date,
@@ -162,13 +166,12 @@ router.get('/stats', authenticateToken, requireRole(['admin']), (req: Authentica
       ORDER BY date DESC
       LIMIT 7
     `
-
     const recentActivity = db.prepare(recentActivityQuery).all(...queryParams)
 
     res.json({
       actionStats,
       userStats,
-      recentActivity
+      recentActivity,
     })
   } catch (error) {
     console.error('Error fetching activity log stats:', error)

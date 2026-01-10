@@ -8,7 +8,7 @@ import type { ActivityLog, PaginatedResponse } from '@/types'
 
 interface LogFilters {
   action: string
-  user_id: string
+  username: string
   dateFrom: string
   dateTo: string
   page: number
@@ -22,7 +22,7 @@ const ActivityLogsPage = () => {
   const [error, setError] = useState('')
   const [filters, setFilters] = useState<LogFilters>({
     action: '',
-    user_id: '',
+    username: '',
     dateFrom: '',
     dateTo: '',
     page: 1,
@@ -31,6 +31,9 @@ const ActivityLogsPage = () => {
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const [usernameOptions, setUsernameOptions] = useState<{ value: string; label: string }[]>([
+    { value: '', label: 'All Users' },
+  ])
 
   useEffect(() => {
     if (currentUser?.role !== 'admin') {
@@ -40,6 +43,49 @@ const ActivityLogsPage = () => {
     }
     fetchLogs()
   }, [currentUser, filters])
+
+  useEffect(() => {
+    if (!isAuthenticated || !token || currentUser?.role !== 'admin') return
+
+    const fetchUsernames = async () => {
+      try {
+        // ✅ Ideal: you have an endpoint that returns users
+        // Adjust the endpoint/shape to your backend
+        const res = await fetch(configService.getApiUrl('/api/users?limit=1000'), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!res.ok) throw new Error('Failed to fetch users')
+
+        const json = await res.json()
+
+        // adapt this mapping to your response shape
+        const usernames: string[] = (json.items ?? json.data ?? json ?? [])
+          .map((u: any) => u.username)
+          .filter(Boolean)
+
+        const unique = Array.from(new Set(usernames)).sort((a, b) => a.localeCompare(b))
+
+        setUsernameOptions([
+          { value: '', label: 'All Users' },
+          ...unique.map((u) => ({ value: u, label: `@${u}` })),
+        ])
+      } catch (e) {
+        // Fallback: build from whatever logs are currently loaded (limited but works)
+        const unique = Array.from(new Set((logs ?? []).map((l) => l.username).filter(Boolean))).sort()
+        setUsernameOptions([
+          { value: '', label: 'All Users' },
+          ...unique.map((u) => ({ value: u, label: `@${u}` })),
+        ])
+      }
+    }
+
+    fetchUsernames()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, token, currentUser?.role])
 
   const fetchLogs = async () => {
     try {
@@ -56,7 +102,7 @@ const ActivityLogsPage = () => {
       queryParams.append('limit', filters.limit.toString())
 
       if (filters.action) queryParams.append('action', filters.action)
-      if (filters.user_id) queryParams.append('user_id', filters.user_id)
+      if (filters.username) queryParams.append('username', filters.username)
       if (filters.dateFrom) queryParams.append('dateFrom', filters.dateFrom)
       if (filters.dateTo) queryParams.append('dateTo', filters.dateTo)
 
@@ -89,7 +135,7 @@ const ActivityLogsPage = () => {
   const clearFilters = () => {
     setFilters({
       action: '',
-      user_id: '',
+      username: '',
       dateFrom: '',
       dateTo: '',
       page: 1,
@@ -112,13 +158,15 @@ const ActivityLogsPage = () => {
   const getActionBadgeColor = (action: string) => {
     const colors: Record<string, string> = {
       login: 'bg-green-100 text-green-800',
-      logout: 'bg-gray-100 text-gray-800',
+      logout: 'bg-slate-100 text-slate-800',
       create_user: 'bg-blue-100 text-blue-800',
-      update_user: 'bg-yellow-100 text-yellow-800',
-      create_pcr: 'bg-purple-100 text-purple-800',
-      update_pcr: 'bg-orange-100 text-orange-800',
-      submit_pcr: 'bg-green-100 text-green-800',
+      update_user: 'bg-amber-100 text-amber-800',
+      delete_user: 'bg-rose-100 text-rose-800',
+      create_pcr: 'bg-indigo-100 text-indigo-800',
+      update_pcr: 'bg-yellow-100 text-yellow-800',
+      submit_pcr: 'bg-teal-100 text-teal-800',
       delete_pcr: 'bg-red-100 text-red-800',
+      cleanup_pcr_reports: 'bg-fuchsia-100 text-fuchsia-800',
     }
     return colors[action] || 'bg-gray-100 text-gray-800'
   }
@@ -227,11 +275,11 @@ const ActivityLogsPage = () => {
               ]}
             />
 
-            <Input
-              label="User ID"
-              placeholder="Filter by user ID"
-              value={filters.user_id}
-              onChange={(e) => handleFilterChange('user_id', e.target.value)}
+            <Select
+              label="Username"
+              value={filters.username}
+              onChange={(e) => handleFilterChange('username', e.target.value)}
+              options={usernameOptions}
             />
 
             <Input
@@ -290,81 +338,40 @@ const ActivityLogsPage = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
                         Action
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                        Resource
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
-                        IP Address
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
-                        Details
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {logs.map((log) => {
-                      const details = parseDetails(log.details)
-                      return (
-                        <tr key={log.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatDate(log.created_at)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-8 w-8">
-                                <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
-                                  <User className="h-4 w-4 text-gray-600" />
-                                </div>
-                              </div>
-                              <div className="ml-3">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {formatUserName(log)}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  ID: {log.user_id}
-                                </div>
+                    {logs.map((log) => (
+                      <tr key={log.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {formatDate(log.created_at)}
+                        </td>
+
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-8 w-8">
+                              <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                <User className="h-4 w-4 text-gray-600" />
                               </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getActionBadgeColor(log.action)}`}>
-                              {log.action.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {log.resource_type ? (
-                              <div>
-                                <div className="font-medium">{log.resource_type}</div>
-                                {log.resource_id && (
-                                  <div className="text-xs text-gray-500 truncate max-w-[100px]">
-                                    {log.resource_id}
-                                  </div>
-                                )}
+                            <div className="ml-3">
+                              <div className="text-sm font-medium text-gray-900">
+                                {formatUserName(log)}
                               </div>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {log.ip_address || <span className="text-gray-400">-</span>}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-900">
-                            {details ? (
-                              <div className="max-w-[200px]">
-                                <div className="text-xs text-gray-500">
-                                  {details.method} {details.url}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  Status: {details.statusCode}
-                                </div>
+                              <div className="text-xs text-gray-500">
+                                {log.username ? `@${log.username}` : `ID: ${log.user_id}`}
                               </div>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getActionBadgeColor(log.action)}`}>
+                            {log.action.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

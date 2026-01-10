@@ -65,6 +65,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
     { value: 'Protection Services', label: 'Protection Services' },
     { value: 'VCRT', label: 'VCRT' },
     { value: 'Lifeguard', label: 'Lifeguard' },
+    { value: 'Sports Services', label: 'Sports Services' },
   ]
 
   return (
@@ -258,7 +259,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                 label="Who Started Therapy"
                 options={whoStartedOptions}
                 value={data.whoStartedTherapy}
-                onChange={(value) => handleFieldChange('whoStartedTherapy', value as 'Protection Services' | 'VCRT' | 'Lifeguard')}
+                onChange={(value) => handleFieldChange('whoStartedTherapy', value as 'Protection Services' | 'VCRT' | 'Lifeguard' | 'Sports Services')}
                 error={errors.whoStartedTherapy}
               />
             </div>

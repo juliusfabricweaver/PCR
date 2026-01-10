@@ -9,6 +9,7 @@ interface PCRReport {
   status: string
   created_at: string
   updated_at: string
+  report_number?: string | null
   form_data?: any
 }
 
@@ -53,7 +54,7 @@ const ReportsPage = () => {
       const reportData = data.data
 
       // Show PDF preview using the existing PDF service
-      await pdfService.showPrintPreview(reportData.form_data)
+      await pdfService.showDownloadPreview(reportData.form_data)
     } catch (err) {
       setError('Failed to load report details')
       console.error('Error loading report:', err)
@@ -98,18 +99,19 @@ const ReportsPage = () => {
     })
   }
 
-  const formatReportId = (dateString: string) => {
-    const date = new Date(
-      new Date(dateString).toLocaleString('en-US', { timeZone: 'Etc/GMT+8' })
-    )
-
+  const formatFallbackId = (dateString: string) => {
+    const date = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Etc/GMT+8' }))
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}${month}${day}_${hours}${minutes}`
+  }
 
-    return `pcr_${year}${month}${day}_${hours}${minutes}`
+  const displayReportId = (report: PCRReport) => {
+    const rn = (report.report_number ?? '').trim()
+    return rn ? rn : formatFallbackId(report.created_at)
   }
 
   if (loading) {
@@ -195,7 +197,7 @@ const ReportsPage = () => {
                       onClick={report.status === 'submitted' ? () => handleViewReport(report.id) : undefined}
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {formatReportId(report.created_at)}
+                        {displayReportId(report)}
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap">
