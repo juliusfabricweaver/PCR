@@ -16,7 +16,16 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
   try {
     const { status, limit = 50, offset = 0 } = req.query;
 
-    let query = 'SELECT id, status, created_at, updated_at FROM pcr_reports WHERE created_by = ?';
+    let query = `
+      SELECT
+        id,
+        status,
+        created_at,
+        updated_at,
+        NULLIF(TRIM(json_extract(form_data, '$.reportNumber')), '') AS report_number
+      FROM pcr_reports
+      WHERE created_by = ?
+      `;
     const params: any[] = [req.user!.id];
 
     if (status) {

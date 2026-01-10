@@ -101,7 +101,7 @@ Editable cells with IDs:
 - **Time/Flow Rate pairs** - `frTime1`-`frTime6`, `frFlowRate1`-`frFlowRate6`
 
 - **Reason for Ending Therapy** - `reasonForEndingTherapy` (textarea)
-- **Who Started Therapy** - `whoStartedTherapy` (radio: Protection, VCRT, Lifeguard)
+- **Who Started Therapy** - `whoStartedTherapy` (radio: Protection, VCRT, Lifeguard, Sports Services)
 
 ## Vital Signs Table 2 
 Editable cells with IDs:

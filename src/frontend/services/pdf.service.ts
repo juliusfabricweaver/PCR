@@ -4,6 +4,7 @@
 import jsPDF from 'jspdf'
 import type { PCRFormData, VitalSign, VitalSigns2 } from '@/types'
 import { OxygenProtocol } from '../types'
+import { PDFDocument } from 'pdf-lib'
 
 interface PDFOptions {
   includeImages?: boolean
@@ -16,15 +17,7 @@ interface PDFOptions {
     bottom: number
     left: number
   }
-}
-
-interface PrintOptions {
-  showPreview?: boolean
-  printerName?: string
-  copies?: number
-  colorMode?: 'color' | 'grayscale' | 'blackwhite'
-  paperSize?: 'letter' | 'a4' | 'legal'
-  orientation?: 'portrait' | 'landscape'
+  appendPdf?: File
 }
 
 interface PDFGenerationResult {
@@ -175,6 +168,16 @@ export class PDFService {
   }
 
 
+
+  private downloadPDF(result: PDFGenerationResult): void {
+    const a = document.createElement('a')
+    a.href = result.url
+    a.download = result.filename || 'PCR.pdf'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
   /**
    * Generate comprehensive PDF report
    */
@@ -234,8 +237,18 @@ export class PDFService {
       // Signatures and Footer
       yPosition = this.addSignaturesAndFooter(pdf, data, opts, yPosition, contentWidth)
 
-      // Generate blob and URL
-      const pdfBlob = pdf.output('blob')
+      // NEW: append sign-off PDF
+      // Generate blob
+      let pdfBlob = pdf.output('blob')
+
+      // Append optional sign-off PDF (STRICT: fail loudly if it can't be appended)
+      const appendix = opts.appendPdf
+      if (appendix) {
+        console.log('[PDF] Appending sign-off PDF:', appendix.name, appendix.type, appendix.size)
+        pdfBlob = await this.appendPdfToBlob(pdfBlob, appendix)
+      }
+
+
       const url = URL.createObjectURL(pdfBlob)
       const filename = this.generateFilename(data)
 
@@ -245,6 +258,7 @@ export class PDFService {
         filename,
         size: pdfBlob.size,
       }
+
     } catch (error) {
       console.error('PDF generation failed:', error)
       throw new Error('Failed to generate PDF report')
@@ -252,30 +266,36 @@ export class PDFService {
   }
 
   /**
-   * Show print preview modal
+   * Show download preview modal
    */
-  async showPrintPreview(data: PCRFormData, options: PDFOptions = {}): Promise<void> {
+  async showDownloadPreview(
+    data: PCRFormData,
+    options: PDFOptions = {},
+    ui: { allowDownload?: boolean } = {}
+  ): Promise<void> {
+    const { allowDownload = true } = ui
     const result = await this.generatePDFReport(data, options)
-    
-    // Create preview modal
+
     const modal = document.createElement('div')
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
     modal.innerHTML = `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 h-[90vh] flex flex-col">
         <div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Print Preview</h3>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Download Preview</h3>
           <div class="flex space-x-2">
-            <button id="print-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              Print
-            </button>
+            ${allowDownload ? `
+              <button id="download-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                Download
+              </button>
+            ` : ''}
             <button id="close-btn" class="px-2 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400">
               ✕
             </button>
           </div>
         </div>
         <div class="flex-1 min-h-0 p-4 overflow-hidden">
-          <iframe 
-            src="${result.url}#toolbar=0" 
+          <iframe
+            src="${result.url}#toolbar=0&navpanes=0&scrollbar=0"
             class="w-full h-full border rounded flex-1"
             title="PDF Preview"
           ></iframe>
@@ -285,25 +305,18 @@ export class PDFService {
 
     document.body.appendChild(modal)
 
-    // Event handlers
-    const printBtn = modal.querySelector('#print-btn')
+    const downloadBtn = modal.querySelector('#download-btn')
     const closeBtn = modal.querySelector('#close-btn')
 
-    printBtn?.addEventListener('click', () => {
-      this.printPDF(result.url)
-    })
+    downloadBtn?.addEventListener('click', () => this.downloadPDF(result))
 
     const closeModal = () => {
       document.body.removeChild(modal)
       URL.revokeObjectURL(result.url)
     }
-
     closeBtn?.addEventListener('click', closeModal)
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal()
-    })
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal() })
 
-    // ESC key handler
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         closeModal()
@@ -314,97 +327,77 @@ export class PDFService {
   }
 
   /**
-   * Print PDF directly
+   * Create "Confirm Downloaded" workflow
    */
-  	printPDF(url: string, options: PrintOptions = {}): void {
-		const iframe = document.createElement('iframe')
-		iframe.style.position = 'fixed'
-		iframe.style.right = '0'
-		iframe.style.bottom = '0'
-		iframe.style.width = '0'
-		iframe.style.height = '0'
-		iframe.style.border = '0'
-		iframe.src = url
+    async confirmDownloadedWorkflow(
+      data: PCRFormData,
+      options: PDFOptions = {},
+      onConfirm: (confirmed: boolean, timestamp: string) => void,
+      ui?: { allowDownload?: boolean }
+    ): Promise<void> {
+      const allowDownload = ui?.allowDownload ?? true
+    let result: PDFGenerationResult | null = null
 
-		document.body.appendChild(iframe)
+    const ensureResult = async () => {
+      if (!result) {
+        result = await this.generatePDFReport(data, options)
+      }
+      return result
+    }
 
-		iframe.onload = () => {
-			const win = iframe.contentWindow
-			if (!win) return
-
-			const cleanup = () => {
-				try {
-					// Remove listeners first
-					if ('onafterprint' in win) {
-						win.removeEventListener('afterprint', cleanup as any)
-					} else if (win.matchMedia) {
-						mql?.removeEventListener
-							? mql.removeEventListener('change', mqlListener)
-							: mql.removeListener(mqlListener)
-					}
-				} catch {}
-				// Then remove iframe
-				document.body.removeChild(iframe)
-			}
-
-			// Fallback for browsers without onafterprint on the iframe window
-			let mql: MediaQueryList | null = null
-			const mqlListener = (e: MediaQueryListEvent) => {
-				// when print dialog closes, matches goes from true -> false
-				if (!e.matches) cleanup()
-			}
-
-			// Prefer onafterprint
-			if ('onafterprint' in win) {
-				win.addEventListener('afterprint', cleanup as any)
-			} else if (win.matchMedia) {
-				mql = win.matchMedia('print')
-				if (mql.addEventListener) mql.addEventListener('change', mqlListener)
-				else mql.addListener(mqlListener)
-			}
-
-			// Ensure focus, then trigger print
-			try { win.focus() } catch {}
-			setTimeout(() => win.print(), 50)
-		}
-	}
-
-  /**
-   * Create "Confirm Printed" workflow
-   */
-  async confirmPrintedWorkflow(
-    data: PCRFormData,
-    onConfirm: (confirmed: boolean, timestamp: string) => void
-  ): Promise<void> {
-    const result = await this.generatePDFReport(data)
-    
-    // Show print confirmation modal
     const modal = document.createElement('div')
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
     modal.innerHTML = `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Print Confirmation
+            Download Confirmation
           </h3>
+
           <div class="mb-6">
             <div class="flex items-center space-x-2 mb-4">
-              <button id="preview-print-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                Preview & Print
+              <button
+                id="preview-download-btn"
+                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Preview
               </button>
-              <button id="direct-print-btn" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                Direct Print
-              </button>
+
+              ${
+                allowDownload
+                  ? `
+                    <button
+                      id="direct-download-btn"
+                      class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                    >
+                      Download
+                    </button>
+                  `
+                  : ''
+              }
             </div>
+
             <p class="text-sm text-gray-600 dark:text-gray-400">
-              Please print the PCR report and confirm below when completed.
+              ${
+                allowDownload
+                  ? 'Please download the PCR report and confirm below when completed.'
+                  : 'Please preview the PCR report and confirm below when completed.'
+              }
             </p>
           </div>
+
           <div class="flex space-x-3">
-            <button id="confirm-printed-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400" disabled>
-              Confirm Printed
+            <button
+              id="confirm-downloaded-btn"
+              class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
+              disabled
+            >
+              Submit
             </button>
-            <button id="cancel-btn" class="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+            <button
+              id="cancel-btn"
+              class="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
               Cancel
             </button>
           </div>
@@ -414,25 +407,24 @@ export class PDFService {
 
     document.body.appendChild(modal)
 
-    let printAttempted = false
-
-    // Event handlers
-    const previewPrintBtn = modal.querySelector('#preview-print-btn')
-    const directPrintBtn = modal.querySelector('#direct-print-btn')
-    const confirmBtn = modal.querySelector('#confirm-printed-btn') as HTMLButtonElement
+    const previewBtn = modal.querySelector('#preview-download-btn')
+    const directBtn = modal.querySelector('#direct-download-btn')
+    const confirmBtn = modal.querySelector('#confirm-downloaded-btn') as HTMLButtonElement
     const cancelBtn = modal.querySelector('#cancel-btn')
 
-    previewPrintBtn?.addEventListener('click', () => {
-      this.showPrintPreview(data)
-      printAttempted = true
+    previewBtn?.addEventListener('click', async () => {
+      await ensureResult()
+      this.showDownloadPreview(data, options, { allowDownload })
       confirmBtn.disabled = false
     })
 
-    directPrintBtn?.addEventListener('click', () => {
-      this.printPDF(result.url)
-      printAttempted = true
+
+    directBtn?.addEventListener('click', async () => {
+      const r = await ensureResult()
+      this.downloadPDF(r)
       confirmBtn.disabled = false
     })
+
 
     confirmBtn?.addEventListener('click', () => {
       const timestamp = new Date().toISOString()
@@ -446,6 +438,20 @@ export class PDFService {
       document.body.removeChild(modal)
       URL.revokeObjectURL(result.url)
     })
+  }
+
+  private async appendPdfToBlob(baseBlob: Blob, appendix: File): Promise<Blob> {
+    const baseBytes = new Uint8Array(await baseBlob.arrayBuffer())
+    const appendixBytes = new Uint8Array(await appendix.arrayBuffer())
+
+    const baseDoc = await PDFDocument.load(baseBytes)
+    const appendixDoc = await PDFDocument.load(appendixBytes)
+
+    const pages = await baseDoc.copyPages(appendixDoc, appendixDoc.getPageIndices())
+    pages.forEach((p) => baseDoc.addPage(p))
+
+    const mergedBytes = await baseDoc.save()
+    return new Blob([mergedBytes], { type: 'application/pdf' })
   }
 
   /**
@@ -614,9 +620,9 @@ export class PDFService {
       [
         { label: 'Status:', value: data.status || '' },
         { label: 'Student/Employee #:', value: data.studentEmployeeNumber || ' Not Recorded' },
-        { label: 'Workplace Injury?:', value: data.workplaceInjury || '' },
+        { label: 'Emergency Contact Name (Relationship):', value: data.emergencyContactName || '' },
       ],
-      [1, 1, 1], 
+      [1, 1, 2], 
       yPosition,
       options,
       contentWidth
@@ -626,11 +632,13 @@ export class PDFService {
     yPosition = renderFieldsRow(
       pdf,
       [
-        { label: 'Emergency Contact Name (Relationship):', value: data.emergencyContactName || '' },
         { label: 'Contacted?:', value: data.contacted || '' },
+        { label: 'Contact Phone:', value: data.emergencyContactPhone || '' },
         { label: 'Contacted by:', value: data.contactedBy || '' },
+        { label: 'Workplace Injury?:', value: data.workplaceInjury || '' },
+        
       ],
-      [2, 1, 1], 
+      [1, 1, 1, 1], 
       yPosition,
       options,
       contentWidth
@@ -1373,6 +1381,18 @@ export class PDFService {
       contentWidth
     )
 
+    // If paramedics, render Hospital Destination on its own row under it
+    if (data.patientCareTransferred === 'Paramedics') {
+      yPosition = renderFieldsRow(
+        pdf,
+        [{ label: 'Hospital Destination:', value: data.hospitalDestination || '' }],
+        [4],
+        yPosition,
+        options,
+        contentWidth
+      )
+    }
+
     pdf.setFont('helvetica', 'bold')
 		pdf.text('Comments: ', options.margins.left, yPosition)
 		pdf.setFont('helvetica', 'normal')
@@ -1390,9 +1410,9 @@ export class PDFService {
     return yPosition + 4
   }
 
-  /**
-   * Signatures + footer strip pinned to the very bottom of the page.
-   * It reserves a fixed-height area above the bottom margin, regardless of current y.
+    /**
+   * Signature replacement strip pinned to the very bottom of the page.
+   * Replaces signature boxes with a statement listing responders' names.
    */
   private addSignaturesAndFooter(
     pdf: jsPDF,
@@ -1403,82 +1423,54 @@ export class PDFService {
     const pageW = pdf.internal.pageSize.getWidth()
     const pageH = pdf.internal.pageSize.getHeight()
 
-    // Layout
-    const stripHeight = 32
-    const labelGap = 4
-    const boxHeight = 14
-    const boxPadX = 3
-    const topLineGap = 4
-
     const bottom = options.margins.bottom
     const x0 = options.margins.left
     const x1 = pageW - options.margins.right
+    const contentW = x1 - x0
 
-    // Page collision check
+    // fixed strip height at bottom
+    const stripHeight = 18
     const stripTopY = pageH - bottom - stripHeight
-    if (yPosition > stripTopY - topLineGap) {
+
+    // if we collide with content, push to a new page
+    if (yPosition > stripTopY - 4) {
       pdf.addPage()
     }
 
-    const sigTopY = pageH - options.margins.bottom - stripHeight
-    const sigBottomY = pageH - options.margins.bottom
+    const startY = pageH - bottom - stripHeight + 5
 
-    // Separator line above strip
+    // separator line above strip
     pdf.setDrawColor(0)
     pdf.setLineWidth(0.4)
-    pdf.line(x0, sigTopY - 2, x1, sigTopY - 2)
+    pdf.line(x0, stripTopY - 2, x1, stripTopY - 2)
 
-    // Always 4 equal quarters
-    const totalWidth = x1 - x0
-    const colW = totalWidth / 4
+    // Collect names
+    const names = [
+      data.supervisor ? `Supervisor: ${data.supervisor}` : '',
+      data.responder1 ? `Responder 1: ${data.responder1}` : '',
+      data.responder2 ? `Responder 2: ${data.responder2}` : '',
+      data.responder3 ? `Responder 3: ${data.responder3}` : '',
+    ].filter(Boolean)
 
-    const titles = ['Supervisor', 'Responder 1', 'Responder 2', 'Responder 3']
-    const names  = [
-      data.supervisor ?? '',
-      data.responder1 ?? '',
-      data.responder2 ?? '',
-      data.responder3 ?? '',
-    ]
+    const respondersLine = names.length ? names.join(' | ') : 'Responders: Not Recorded'
 
-    const labelY = sigTopY + 4
-    const nameY  = labelY + 4
-    const boxY   = nameY + labelGap
+    const statement =
+      'This statement serves as a replacement for signatures on this Patient Care Report.'
 
-    for (let i = 0; i < 4; i++) {
-      const colX = x0 + i * colW
-      const boxX = colX + boxPadX
-      const boxW = colW - 2 * boxPadX
+    pdf.setFontSize(7)
 
-      const title = titles[i]
-      const name  = names[i]
+    // Line 1: responders
+    pdf.setFont('helvetica', 'bold')
+    const line1 = pdf.splitTextToSize(respondersLine, contentW)
+    pdf.text(line1, x0, startY)
 
-      // Draw logic:
-      // - Supervisor column always drawn
-      // - Responder columns drawn only if name present
-      const shouldDraw = i === 0 || (name && String(name).trim() !== '')
-      if (!shouldDraw) continue
+    // Line 2: statement
+    pdf.setFont('helvetica', 'normal')
+    const line2Y = startY + 4 * line1.length
+    const line2 = pdf.splitTextToSize(statement, contentW)
+    pdf.text(line2, x0, line2Y)
 
-      // Title
-      pdf.setFont('helvetica', 'bold')
-      pdf.setFontSize(8)
-      pdf.setTextColor(0, 0, 0)
-      pdf.text(title, colX + colW / 2, labelY, { align: 'center' })
-
-      // Name (if provided)
-      if (name) {
-        pdf.setFont('helvetica', 'normal')
-        pdf.setFontSize(8)
-        pdf.text(String(name), colX + colW / 2, nameY, { align: 'center' })
-      }
-
-      // Signature box
-      pdf.setFillColor(230, 230, 230)
-      pdf.setDrawColor(200, 200, 200)
-      pdf.setLineWidth(0.2)
-      pdf.rect(boxX, boxY, boxW, boxHeight, 'FD')
-    }
-
-    return sigBottomY
+    return pageH - bottom
   }
 
   /**

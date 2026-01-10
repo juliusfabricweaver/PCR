@@ -24,12 +24,15 @@ import type { PCRFormData, VitalSign, VitalSigns2 } from '../types'
 const PCRPage: React.FC = () => {
   const { data, updateField, errors, isDirty, isValid, reset, validateField, loadData } = useForm()
   const { showNotification } = useNotification()
-  const { token, isAuthenticated } = useAuth()
+  const { token, isAuthenticated, user: currentUser } = useAuth()
+  const isAdmin = currentUser?.role === 'admin'
   const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingDraft, setIsLoadingDraft] = useState(false)
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [signOffPdf, setSignOffPdf] = useState<File | null>(null)
+  const [signOffPdfError, setSignOffPdfError] = useState<string>('')
   const lastAutoCommentsRef = React.useRef<string>('')
 
   useEffect(() => {
@@ -92,8 +95,11 @@ const PCRPage: React.FC = () => {
         return
       }
 
-      // Generate PDF and show print confirmation workflow
-      await pdfService.confirmPrintedWorkflow(data, async (confirmed, timestamp) => {
+      // Generate PDF and show download confirmation workflow
+      await pdfService.confirmDownloadedWorkflow(
+        data,
+        { appendPdf: signOffPdf ?? undefined },
+        async (confirmed, timestamp) => {
         if (confirmed) {
           try {
             // Update existing draft or create new submission
@@ -111,16 +117,16 @@ const PCRPage: React.FC = () => {
                   ? {
                       form_data: {
                         ...data,
-                        printedAt: timestamp,
-                        printConfirmed: true
+                        downloadedAt: timestamp,
+                        downloadConfirmed: true
                       },
                       status: 'submitted'
                     }
                   : {
                       data: {
                         ...data,
-                        printedAt: timestamp,
-                        printConfirmed: true
+                        downloadedAt: timestamp,
+                        downloadConfirmed: true
                       }
                     }
               )
@@ -146,12 +152,20 @@ const PCRPage: React.FC = () => {
           showNotification('Form submission cancelled', 'info')
         }
         setIsSubmitting(false)
-      })
+      },
+      { allowDownload: isAdmin }
+    )
     } catch (error) {
       console.error('PDF generation failed:', error)
-      showNotification('Failed to generate PDF report', 'error')
+      showNotification(
+        signOffPdf
+          ? 'Failed to generate PDF (could not append the sign-off PDF). Try a different PDF or remove it.'
+          : 'Failed to generate PDF report',
+        'error'
+      )
       setIsSubmitting(false)
     }
+
   }
 
   const handleReset = () => {
@@ -271,7 +285,7 @@ const PCRPage: React.FC = () => {
       date: formatDate(new Date()),                 
       location: 'Morisset 6th floor',
       callNumber: '002',
-      reportNumber: '2025-001',
+      reportNumber: '2026-001',
       supervisor: 'Hailey Bieber',
       primaryPSM: 'Kim Kardashian',
       responder1: 'Frodo Baggins',
@@ -337,8 +351,10 @@ const PCRPage: React.FC = () => {
       } as any,
 
       // --- Additional Information (required group) ---
+      comments: 'VCRT Responders (NAMES) were called at yada yada',
       transferComments: 'Patient care transferred to paramedics yada yada yada.',
-      patientCareTransferred: 'Paramedics',        
+      patientCareTransferred: 'Paramedics',
+      hospitalDestination: 'MontFort Hospital',        
       unitNumber: 'A-123',                         
       timeCareTransferred: '15:12',                
     }
@@ -349,6 +365,33 @@ const PCRPage: React.FC = () => {
     showNotification('Sample data filled for testing', 'info')
   }
 
+  // Drop-box for sign-off
+  const validateAndSetSignOff = (file: File | null) => {
+    setSignOffPdfError('')
+    if (!file) {
+      setSignOffPdf(null)
+      return
+    }
+
+    const isPdf =
+      file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    const maxMb = 15
+    const maxBytes = maxMb * 1024 * 1024
+
+    if (!isPdf) {
+      setSignOffPdf(null)
+      setSignOffPdfError('Please upload a PDF file.')
+      return
+    }
+
+    if (file.size > maxBytes) {
+      setSignOffPdf(null)
+      setSignOffPdfError(`PDF is too large (max ${maxMb} MB).`)
+      return
+    }
+
+    setSignOffPdf(file)
+  }
 
   const hasTourniquet =
     Array.isArray(data.hemorrhageControl) &&
@@ -1047,13 +1090,22 @@ const PCRPage: React.FC = () => {
               />
               
               {data.patientCareTransferred === 'Paramedics' && (
-                <Input
-                  label="Unit Number"
-                  value={data.unitNumber || ''}
-                  onChange={(e) => updateField('unitNumber', e.target.value)}
-                  placeholder="Paramedic unit number"
-                  requireUnknown
-                />
+                <>
+                  <Input
+                    label="Unit Number"
+                    value={data.unitNumber || ''}
+                    onChange={(e) => updateField('unitNumber', e.target.value)}
+                    placeholder="Paramedic unit number"
+                    requireUnknown
+                  />
+                  <Input
+                    label="Hospital Destination"
+                    value={data.hospitalDestination || ''}
+                    onChange={(e) => updateField('hospitalDestination', e.target.value)}
+                    placeholder="e.g., The Ottawa Hospital - Civic"
+                    requireUnknown
+                  />
+                 </>
               )}
 
               {data.patientCareTransferred === 'Police' && (
@@ -1084,6 +1136,64 @@ const PCRPage: React.FC = () => {
               error={errors.timeCareTransferred}
               required
             />
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Sign-Off Attachment"
+          subtitle="Upload patient sign-off sheet (as a PDF) to append to the report"
+        >
+          <div
+            className={cn(
+              'border-2 border-dashed rounded-lg p-4 transition',
+              'hover:bg-gray-50 dark:hover:bg-gray-800/40',
+              signOffPdfError ? 'border-red-300' : 'border-gray-300'
+            )}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault()
+              const file = e.dataTransfer.files?.[0]
+              validateAndSetSignOff(file ?? null)
+            }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Drag & drop a PDF here, or browse.
+                </div>
+              </div>
+
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  className="hidden"
+                  onChange={(e) => validateAndSetSignOff(e.target.files?.[0] ?? null)}
+                />
+                <span className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                  Browse
+                </span>
+              </label>
+            </div>
+
+            {signOffPdf && (
+              <div className="mt-3 flex items-center justify-between rounded bg-gray-100 dark:bg-gray-800 px-3 py-2">
+                <div className="text-sm text-gray-900 dark:text-gray-100 truncate">
+                  {signOffPdf.name}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => validateAndSetSignOff(null)}
+                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+
+            {signOffPdfError && (
+              <div className="mt-2 text-sm text-red-600">{signOffPdfError}</div>
+            )}
           </div>
         </FormSection>
 

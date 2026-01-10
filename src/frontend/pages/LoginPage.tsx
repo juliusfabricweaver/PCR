@@ -138,7 +138,7 @@ const LoginPage: React.FC = () => {
             <Card.Footer>
               <div className="space-y-4">
                 <div className="text-center text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                  <p>© 2025 PCR System</p>
+                  <p>© 2026 PCR System</p>
                 </div>
               </div>
             </Card.Footer>

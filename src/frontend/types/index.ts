@@ -97,12 +97,13 @@ export interface OxygenProtocol {
   deliveryDevice?: 'NC' | 'NRB' | 'BVM';
   flowRateAlterations?: Array<{ time?: string; flowRate?: string }>;
   reasonForEndingTherapy?: string;
-  whoStartedTherapy?: 'Protection' | 'VCRT' | 'Lifeguard';
+  whoStartedTherapy?: 'Protection' | 'VCRT' | 'Lifeguard' | 'Sports Services';
 }
 
 export interface AdditionalInformation {
   comments: string;
   transferComments: string;
+  hospitalDestination: string;
   patientCareTransferred: 'Paramedics' | 'Police' | 'Self' | 'Family/Friend' | 'Clinic';
   unitNumber?: string;
   timeCareTransferred: string;
