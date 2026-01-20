@@ -11,6 +11,44 @@ function generateId(): string {
   return 'pcr_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 }
 
+// GET /api/pcr/:id - Get specific PCR report
+router.get('/:id', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const report = db.prepare(`
+      SELECT * FROM pcr_reports
+      WHERE id = ?
+    `).get(id) as any;
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'PCR report not found' });
+    }
+
+    const isAdmin = req.user!.role === 'admin';
+    const isOwner = report.created_by === req.user!.id;
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Parse form_data JSON
+    const reportData = {
+      ...report,
+      form_data: JSON.parse(report.form_data)
+    };
+
+    res.json({
+      success: true,
+      data: reportData
+    });
+
+  } catch (error) {
+    console.error('Get PCR report error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 // GET /api/pcr - Get all PCR reports for current user
 router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -24,9 +62,17 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
         updated_at,
         NULLIF(TRIM(json_extract(form_data, '$.reportNumber')), '') AS report_number
       FROM pcr_reports
-      WHERE created_by = ?
-      `;
-    const params: any[] = [req.user!.id];
+    `;
+    const params: any[] = [];
+
+    const isAdmin = req.user!.role === 'admin';
+
+    if (!isAdmin) {
+      query += ` WHERE created_by = ?`;
+      params.push(req.user!.id);
+    } else {
+      query += ` WHERE 1=1`;
+    }
 
     if (status) {
       query += ' AND status = ?';
@@ -45,37 +91,6 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
 
   } catch (error) {
     console.error('Get PCR reports error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-});
-
-// GET /api/pcr/:id - Get specific PCR report
-router.get('/:id', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    const report = db.prepare(`
-      SELECT * FROM pcr_reports
-      WHERE id = ? AND created_by = ?
-    `).get(id, req.user!.id) as any;
-
-    if (!report) {
-      return res.status(404).json({ success: false, message: 'PCR report not found' });
-    }
-
-    // Parse form_data JSON
-    const reportData = {
-      ...report,
-      form_data: JSON.parse(report.form_data)
-    };
-
-    res.json({
-      success: true,
-      data: reportData
-    });
-
-  } catch (error) {
-    console.error('Get PCR report error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -120,12 +135,26 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
 
     // Check if report exists and belongs to user
     const existingReport = db.prepare(`
-      SELECT id FROM pcr_reports
-      WHERE id = ? AND created_by = ?
-    `).get(id, req.user!.id) as any;
+      SELECT id, status, created_by
+      FROM pcr_reports
+      WHERE id = ?
+    `).get(id) as any;
 
     if (!existingReport) {
       return res.status(404).json({ success: false, message: 'PCR report not found' });
+    }
+
+    const isAdmin = req.user!.role === 'admin';
+    const isOwner = existingReport.created_by === req.user!.id;
+
+    // Only admin OR owner can update
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Regular users can only edit drafts
+    if (!isAdmin && existingReport.status !== 'draft') {
+      return res.status(403).json({ success: false, message: 'Submitted reports are locked' });
     }
 
     // Update report

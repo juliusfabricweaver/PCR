@@ -13,7 +13,7 @@ export const formatDate = (date: string | Date, format: 'short' | 'long' | 'date
     case 'short':
       return d.toLocaleDateString()
     case 'long':
-      return d.toLocaleDateString('en-US', {
+      return d.toLocaleDateString('en-CA', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -28,7 +28,7 @@ export const formatDate = (date: string | Date, format: 'short' | 'long' | 'date
 
 export const formatTime = (date: string | Date): string => {
   const d = new Date(date)
-  return d.toLocaleTimeString('en-US', {
+  return d.toLocaleTimeString('en-CA', {
     hour12: false,
     hour: '2-digit',
     minute: '2-digit',

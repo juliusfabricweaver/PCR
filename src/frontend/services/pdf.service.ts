@@ -273,30 +273,49 @@ export class PDFService {
     options: PDFOptions = {},
     ui: { allowDownload?: boolean } = {}
   ): Promise<void> {
-    const { allowDownload = true } = ui
+    // ✅ Default: users cannot download unless explicitly allowed (admin)
+    const allowDownload = ui.allowDownload ?? false
+
     const result = await this.generatePDFReport(data, options)
 
     const modal = document.createElement('div')
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+    modal.className =
+      'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+
     modal.innerHTML = `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 h-[90vh] flex flex-col">
         <div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Download Preview</h3>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            PDF Preview
+          </h3>
+
           <div class="flex space-x-2">
-            ${allowDownload ? `
-              <button id="download-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                Download
-              </button>
-            ` : ''}
-            <button id="close-btn" class="px-2 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400">
+            ${
+              allowDownload
+                ? `
+                  <button
+                    id="download-btn"
+                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Download
+                  </button>
+                `
+                : ''
+            }
+
+            <button
+              id="close-btn"
+              class="px-2 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400"
+            >
               ✕
             </button>
           </div>
         </div>
+
         <div class="flex-1 min-h-0 p-4 overflow-hidden">
           <iframe
             src="${result.url}#toolbar=0&navpanes=0&scrollbar=0"
-            class="w-full h-full border rounded flex-1"
+            class="w-full h-full border rounded"
             title="PDF Preview"
           ></iframe>
         </div>
@@ -305,18 +324,29 @@ export class PDFService {
 
     document.body.appendChild(modal)
 
-    const downloadBtn = modal.querySelector('#download-btn')
-    const closeBtn = modal.querySelector('#close-btn')
+    const closeBtn = modal.querySelector('#close-btn') as HTMLButtonElement | null
+    const downloadBtn = modal.querySelector('#download-btn') as HTMLButtonElement | null
 
-    downloadBtn?.addEventListener('click', () => this.downloadPDF(result))
+    // ✅ Only attach download handler if admin download is enabled
+    if (allowDownload && downloadBtn) {
+      downloadBtn.addEventListener('click', () => this.downloadPDF(result))
+    }
 
     const closeModal = () => {
-      document.body.removeChild(modal)
+      if (modal.parentNode) {
+        document.body.removeChild(modal)
+      }
       URL.revokeObjectURL(result.url)
     }
-    closeBtn?.addEventListener('click', closeModal)
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal() })
 
+    closeBtn?.addEventListener('click', closeModal)
+
+    // ✅ Clicking outside closes modal
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal()
+    })
+
+    // ✅ Esc closes modal
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         closeModal()

@@ -9,6 +9,7 @@ import type { User } from '@/types'
 interface CreateUserForm {
   username: string
   password: string
+  confirmPassword: string
   firstName: string
   lastName: string
   role: 'user' | 'admin'
@@ -30,6 +31,7 @@ const UserManagementPage = () => {
   const [createForm, setCreateForm] = useState<CreateUserForm>({
     username: '',
     password: '',
+    confirmPassword: '',
     firstName: '',
     lastName: '',
     role: 'user'
@@ -88,7 +90,7 @@ const UserManagementPage = () => {
   }
 
   const validateForm = (): boolean => {
-    const errors: Partial<CreateUserForm> = {}
+    const errors: any = {}
 
     if (!createForm.username.trim()) {
       errors.username = 'Username is required'
@@ -102,13 +104,15 @@ const UserManagementPage = () => {
       errors.password = 'Password must be at least 8 characters'
     }
 
-    if (!createForm.firstName.trim()) {
-      errors.firstName = 'First name is required'
+    // confirm password validation
+    if (!createForm.confirmPassword.trim()) {
+      errors.confirmPassword = 'Please confirm password'
+    } else if (createForm.password !== createForm.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match'
     }
 
-    if (!createForm.lastName.trim()) {
-      errors.lastName = 'Last name is required'
-    }
+    if (!createForm.firstName.trim()) errors.firstName = 'First name is required'
+    if (!createForm.lastName.trim()) errors.lastName = 'Last name is required'
 
     setFormErrors(errors)
     return Object.keys(errors).length === 0
@@ -120,13 +124,21 @@ const UserManagementPage = () => {
     try {
       setCreating(true)
 
+      const payload = {
+        username: createForm.username,
+        password: createForm.password,
+        firstName: createForm.firstName,
+        lastName: createForm.lastName,
+        role: createForm.role,
+      }
+
       const response = await fetch(configService.getApiUrl('/api/users'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(createForm),
+        body: JSON.stringify(payload),
       })
 
       const data = await response.json()
@@ -140,6 +152,7 @@ const UserManagementPage = () => {
       setCreateForm({
         username: '',
         password: '',
+        confirmPassword: '',
         firstName: '',
         lastName: '',
         role: 'user'
@@ -276,8 +289,8 @@ const UserManagementPage = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      timeZone: 'Etc/GMT+8',
+    return new Date(dateString).toLocaleDateString('en-CA', {
+      timeZone: 'Etc/GMT+10',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -517,6 +530,16 @@ const UserManagementPage = () => {
             error={formErrors.password}
             required
             helpText="Must be at least 8 characters long"
+          />
+
+          <Input
+            label="Confirm Password"
+            type="password"
+            value={createForm.confirmPassword}
+            onChange={(e) =>
+              setCreateForm({ ...createForm, confirmPassword: e.target.value })
+            }
+            error={formErrors.confirmPassword as any}
           />
 
           <Select

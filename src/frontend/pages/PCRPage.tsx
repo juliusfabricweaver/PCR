@@ -30,57 +30,84 @@ const PCRPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingDraft, setIsLoadingDraft] = useState(false)
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null)
+  const [currentReportId, setCurrentReportId] = useState<string | null>(null)
+  const [loadedStatus, setLoadedStatus] = useState<'draft' | 'submitted' | null>(null)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [signOffPdf, setSignOffPdf] = useState<File | null>(null)
   const [signOffPdfError, setSignOffPdfError] = useState<string>('')
   const lastAutoCommentsRef = React.useRef<string>('')
 
   useEffect(() => {
-    const loadDraftFromUrl = async () => {
+    const loadFromUrl = async () => {
       const urlParams = new URLSearchParams(window.location.search)
       const draftId = urlParams.get('draftId')
+      const reportId = urlParams.get('reportId')
 
-      if (draftId && isAuthenticated && token) {
-        setIsLoadingDraft(true)
-        setCurrentDraftId(draftId)
-
-        try {
-          const response = await fetch(configService.getApiUrl(`/api/pcr/${draftId}`), {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          })
-
-          if (!response.ok) {
-            throw new Error('Failed to load draft')
-          }
-
-          const data = await response.json()
-          const draftData = data.data
-
-          if (draftData.status === 'draft') {
-            loadData(draftData.form_data)
-            showNotification('Draft loaded successfully', 'success')
-          } else {
-            showNotification('This report is not a draft and cannot be edited', 'error')
-          }
-        } catch (error) {
-          console.error('Failed to load draft:', error)
-          showNotification('Failed to load draft', 'error')
-        } finally {
-          setIsLoadingDraft(false)
+      const idToLoad = draftId || reportId
+      if (!idToLoad || !isAuthenticated || !token) {
+        // still set date default
+        if (!data.date) {
+          const todayISO = new Date().toISOString().slice(0, 10)
+          updateField('date', todayISO)
         }
+        return
       }
 
+      setIsLoadingDraft(true)
+
+      // if draftId exists: normal flow
+      if (draftId) setCurrentDraftId(draftId)
+
+      // if reportId exists: admin edit flow
+      if (reportId) setCurrentReportId(reportId)
+
+      try {
+        const response = await fetch(configService.getApiUrl(`/api/pcr/${idToLoad}`), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!response.ok) throw new Error('Failed to load report')
+
+        const json = await response.json()
+        const report = json.data
+
+        setLoadedStatus(report.status)
+
+        // NORMAL USER: only drafts editable
+        if (report.status === 'draft') {
+          loadData(report.form_data)
+          showNotification('Draft loaded successfully', 'success')
+          return
+        }
+
+        // ADMIN: allow editing submitted reports too
+        if (report.status === 'submitted' && isAdmin) {
+          loadData(report.form_data)
+          showNotification('Submission loaded (Admin Edit Mode)', 'info')
+          return
+        }
+
+        // non-admin trying to edit submission
+        showNotification('This report cannot be edited.', 'error')
+      } catch (err) {
+        console.error(err)
+        showNotification('Failed to load report', 'error')
+      } finally {
+        setIsLoadingDraft(false)
+      }
+
+      // set default date if missing
       if (!data.date) {
-        const todayISO = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-        updateField('date', todayISO);
+        const todayISO = new Date().toISOString().slice(0, 10)
+        updateField('date', todayISO)
       }
     }
 
-    loadDraftFromUrl()
-  }, [isAuthenticated, token, loadData, showNotification])
+    loadFromUrl()
+  }, [isAuthenticated, token, isAdmin])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -103,6 +130,7 @@ const PCRPage: React.FC = () => {
         if (confirmed) {
           try {
             // Update existing draft or create new submission
+            const editingId = currentDraftId || currentReportId
             const endpoint = currentDraftId ? `/api/pcr/${currentDraftId}` : '/api/submissions'
             const method = currentDraftId ? 'PUT' : 'POST'
 
@@ -113,21 +141,21 @@ const PCRPage: React.FC = () => {
                 'Authorization': `Bearer ${token}`
               },
               body: JSON.stringify(
-                currentDraftId
+                editingId
                   ? {
                       form_data: {
                         ...data,
                         downloadedAt: timestamp,
-                        downloadConfirmed: true
+                        downloadConfirmed: true,
                       },
-                      status: 'submitted'
+                      status: 'submitted', // stays submitted even after admin edits
                     }
                   : {
                       data: {
                         ...data,
                         downloadedAt: timestamp,
-                        downloadConfirmed: true
-                      }
+                        downloadConfirmed: true,
+                      },
                     }
               )
             })
@@ -166,6 +194,8 @@ const PCRPage: React.FC = () => {
       setIsSubmitting(false)
     }
 
+
+
   }
 
   const handleReset = () => {
@@ -193,8 +223,9 @@ const PCRPage: React.FC = () => {
 
     try {
       // If we're editing an existing draft, update it. Otherwise create new draft.
-      const endpoint = currentDraftId ? `/api/pcr/${currentDraftId}` : '/api/pcr'
-      const method = currentDraftId ? 'PUT' : 'POST'
+      const editingId = currentDraftId || currentReportId
+      const endpoint = editingId ? `/api/pcr/${editingId}` : '/api/pcr'
+      const method = editingId ? 'PUT' : 'POST'
 
       const response = await fetch(configService.getApiUrl(endpoint), {
         method,
@@ -403,7 +434,11 @@ const PCRPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {currentDraftId ? 'Edit Patient Care Report Draft' : 'Patient Care Report'}
+            {currentDraftId
+              ? 'Edit Patient Care Report Draft'
+              : currentReportId
+                ? 'Edit Submitted Patient Care Report (Admin)'
+                : 'Patient Care Report'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
             {isLoadingDraft 
@@ -710,7 +745,7 @@ const PCRPage: React.FC = () => {
               type="tel"
               value={data.emergencyContactPhone || ''}
               onChange={e => updateField('emergencyContactPhone', e.target.value)}
-              placeholder="Phone number"
+              placeholder="(XXX) XXX-XXXX"
               requireUnknown
             />
           </div>
@@ -748,7 +783,7 @@ const PCRPage: React.FC = () => {
               label="Chief Complaint"
               value={data.chiefComplaint || ''}
               onChange={e => updateField('chiefComplaint', e.target.value)}
-              placeholder="Primary reason for call..."
+              placeholder="Primary reason for call / Primary patient complaint..."
               rows={3}
               requireUnknown
             />
@@ -768,7 +803,7 @@ const PCRPage: React.FC = () => {
               label="Allergies"
               value={data.allergies || ''}
               onChange={e => updateField('allergies', e.target.value)}
-              placeholder="Known allergies and reactions..."
+              placeholder="Known allergies (food, medicine...), sensitivities, and reactions..."
               rows={2}
               requireUnknown
             />
@@ -794,10 +829,10 @@ const PCRPage: React.FC = () => {
             />
 
             <Textarea
-              label="Last Meal"
+              label="Last Oral Intake"
               value={data.lastMeal || ''}
               onChange={e => updateField('lastMeal', e.target.value)}
-              placeholder="When and what was last consumed, and whether it sat well..."
+              placeholder="When and what was last consumed (food, drink...), and whether it sat well..."
               rows={2}
               requireUnknown
             />
@@ -932,7 +967,7 @@ const PCRPage: React.FC = () => {
             value={data.positionOfPatient || ''}
             onChange={(e) => updateField('positionOfPatient', e.target.value)}
             error={errors.positionOfPatient}
-            placeholder="Patient position"
+            placeholder="e.g. Seated, Supine, Prone, Semi-Prone..."
             required
           />
         </FormSection>
