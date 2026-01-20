@@ -100,7 +100,7 @@ const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(({
           ref={ref}
           type="text"
           id={inputId}
-          placeholder={format24 ? 'HH:MM (24-hour)' : 'HH:MM'}
+          placeholder={format24 ? 'HH:MM (24hr)' : 'HH:MM'}
           className={cn(
             'form-input pr-20',
             finalError && 'form-input-error',

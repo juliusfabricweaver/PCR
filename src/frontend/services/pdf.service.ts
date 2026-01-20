@@ -273,7 +273,7 @@ export class PDFService {
     options: PDFOptions = {},
     ui: { allowDownload?: boolean } = {}
   ): Promise<void> {
-    const { allowDownload = true } = ui
+    const { allowDownload = false } = ui
     const result = await this.generatePDFReport(data, options)
 
     const modal = document.createElement('div')

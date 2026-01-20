@@ -14,7 +14,8 @@ interface PCRReport {
 }
 
 const ReportsPage = () => {
-  const { token, isAuthenticated } = useAuth()
+  const { token, isAuthenticated, user: currentUser } = useAuth()
+  const isAdmin = currentUser?.role === 'admin'
   const [reports, setReports] = useState<PCRReport[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -53,8 +54,8 @@ const ReportsPage = () => {
       const data = await apiRequest(`/pcr/${reportId}`)
       const reportData = data.data
 
-      // Show PDF preview using the existing PDF service
-      await pdfService.showDownloadPreview(reportData.form_data)
+      // Show PDF preview using the existing PDF service (only admins can download)
+      await pdfService.showDownloadPreview(reportData.form_data, {}, { allowDownload: isAdmin })
     } catch (err) {
       setError('Failed to load report details')
       console.error('Error loading report:', err)
@@ -64,6 +65,12 @@ const ReportsPage = () => {
   const handleEditDraft = (reportId: string) => {
     // Navigate to PCR form with draft ID as URL parameter
     const params = new URLSearchParams({ draftId: reportId })
+    window.location.href = `/pcr/new?${params.toString()}`
+  }
+
+  const handleEditReport = (reportId: string) => {
+    // Navigate to PCR form with report ID as URL parameter (for admin editing submitted reports)
+    const params = new URLSearchParams({ reportId: reportId })
     window.location.href = `/pcr/new?${params.toString()}`
   }
 
@@ -89,8 +96,8 @@ const ReportsPage = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      timeZone: 'Etc/GMT+8',
+    return new Date(dateString).toLocaleDateString('en-CA', {
+      timeZone: 'Etc/GMT+10',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -100,7 +107,7 @@ const ReportsPage = () => {
   }
 
   const formatFallbackId = (dateString: string) => {
-    const date = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Etc/GMT+8' }))
+    const date = new Date(new Date(dateString).toLocaleString('en-CA', { timeZone: 'Etc/GMT+10' }))
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
@@ -237,12 +244,22 @@ const ReportsPage = () => {
                               </button>
                             </>
                           ) : (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleViewReport(report.id) }}
-                              className="text-blue-600 hover:text-blue-900 font-medium"
-                            >
-                              View PDF
-                            </button>
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleViewReport(report.id) }}
+                                className="text-blue-600 hover:text-blue-900 font-medium"
+                              >
+                                View PDF
+                              </button>
+                              {isAdmin && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleEditReport(report.id) }}
+                                  className="text-amber-600 hover:text-amber-900 font-medium"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                            </>
                           )}
 
                           {/* Delete (works for both draft and submitted) */}

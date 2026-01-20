@@ -9,6 +9,7 @@ import type { User } from '@/types'
 interface CreateUserForm {
   username: string
   password: string
+  confirmPassword: string
   firstName: string
   lastName: string
   role: 'user' | 'admin'
@@ -30,6 +31,7 @@ const UserManagementPage = () => {
   const [createForm, setCreateForm] = useState<CreateUserForm>({
     username: '',
     password: '',
+    confirmPassword: '',
     firstName: '',
     lastName: '',
     role: 'user'
@@ -91,6 +93,12 @@ const UserManagementPage = () => {
       errors.password = 'Password must be at least 8 characters'
     }
 
+    if (!createForm.confirmPassword.trim()) {
+      errors.confirmPassword = 'Confirm password is required'
+    } else if (createForm.password !== createForm.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match'
+    }
+
     if (!createForm.firstName.trim()) {
       errors.firstName = 'First name is required'
     }
@@ -109,9 +117,11 @@ const UserManagementPage = () => {
     try {
       setCreating(true)
 
+      // Exclude confirmPassword when sending to API
+      const { confirmPassword, ...payload } = createForm
       await apiRequest('/users', {
         method: 'POST',
-        body: JSON.stringify(createForm),
+        body: JSON.stringify(payload),
       })
 
       await fetchUsers()
@@ -119,6 +129,7 @@ const UserManagementPage = () => {
       setCreateForm({
         username: '',
         password: '',
+        confirmPassword: '',
         firstName: '',
         lastName: '',
         role: 'user'
@@ -226,8 +237,8 @@ const UserManagementPage = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      timeZone: 'Etc/GMT+8',
+    return new Date(dateString).toLocaleDateString('en-CA', {
+      timeZone: 'Etc/GMT+10',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -467,6 +478,15 @@ const UserManagementPage = () => {
             error={formErrors.password}
             required
             helpText="Must be at least 8 characters long"
+          />
+
+          <Input
+            label="Confirm Password"
+            type="password"
+            value={createForm.confirmPassword}
+            onChange={(e) => setCreateForm({ ...createForm, confirmPassword: e.target.value })}
+            error={formErrors.confirmPassword}
+            required
           />
 
           <Select

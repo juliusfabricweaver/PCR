@@ -1,11 +1,14 @@
 import db from '../database'
-import { logActivity } from '../middleware/logger'
 
 export class CleanupService {
   private cleanupInterval: NodeJS.Timeout | null = null
 
+  // Configurable retention periods
+  private readonly PCR_RETENTION_HOURS = 72
+  private readonly LOG_RETENTION_DAYS = 7
+
   start(): void {
-    console.log('📅 Starting PCR cleanup service...')
+    console.log('📅 Starting cleanup service...')
 
     // Run cleanup immediately on start
     this.runCleanup()
@@ -20,38 +23,53 @@ export class CleanupService {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval)
       this.cleanupInterval = null
-      console.log('📅 PCR cleanup service stopped')
+      console.log('📅 Cleanup service stopped')
     }
   }
 
   private runCleanup(): void {
     try {
-      console.log('🧹 Running PCR reports cleanup...')
+      console.log('🧹 Running cleanup...')
 
-      // Delete submitted PCR reports older than 24 hours
-      const deleteQuery = `
-        DELETE FROM pcr_reports
-        WHERE status IN ('submitted','draft')
-        AND datetime(created_at) < datetime('now', '-24 hours')
-      `
+      // Delete PCR reports older than configured retention
+      const pcrResult = this.cleanupPCRReports()
 
-      const result = db.prepare(deleteQuery).run()
+      // Delete activity logs older than configured retention
+      const logsResult = this.cleanupActivityLogs()
 
-      if (result.changes > 0) {
-        console.log(`🗑️  Deleted ${result.changes} PCR report(s) older than 24 hours`)
+      if (pcrResult.changes > 0 || logsResult.changes > 0) {
+        console.log(`🗑️  Deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_HOURS} hours`)
+        console.log(`🗑️  Deleted ${logsResult.changes} activity log(s) older than ${this.LOG_RETENTION_DAYS} days`)
 
         // Log the cleanup activity
-        this.logCleanupActivity(result.changes)
+        this.logCleanupActivity(pcrResult.changes, logsResult.changes)
       } else {
-        console.log('✅ No PCR reports to clean up')
+        console.log('✅ No records to clean up')
       }
 
     } catch (error) {
-      console.error('❌ Error during PCR cleanup:', error)
+      console.error('❌ Error during cleanup:', error)
     }
   }
 
-  private logCleanupActivity(deletedCount: number): void {
+  private cleanupPCRReports(): { changes: number } {
+    const deleteQuery = `
+      DELETE FROM pcr_reports
+      WHERE status IN ('submitted','draft')
+      AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
+    `
+    return db.prepare(deleteQuery).run()
+  }
+
+  private cleanupActivityLogs(): { changes: number } {
+    const deleteQuery = `
+      DELETE FROM activity_logs
+      WHERE datetime(created_at) < datetime('now', '-${this.LOG_RETENTION_DAYS} days')
+    `
+    return db.prepare(deleteQuery).run()
+  }
+
+  private logCleanupActivity(deletedPCRCount: number, deletedLogsCount: number): void {
     try {
       // Create a system activity log entry
       const logId = 'log_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
@@ -64,7 +82,12 @@ export class CleanupService {
         'system', // Use 'system' as user_id for automated tasks
         'cleanup_pcr_reports',
         'pcr_report',
-        JSON.stringify({ deletedCount, reason: '24_hour_retention' })
+        JSON.stringify({
+          deletedPCRCount,
+          deletedLogsCount,
+          pcrRetention: `${this.PCR_RETENTION_HOURS}_hour_retention`,
+          logRetention: `${this.LOG_RETENTION_DAYS}_day_retention`
+        })
       )
     } catch (error) {
       console.error('Failed to log cleanup activity:', error)
@@ -72,43 +95,71 @@ export class CleanupService {
   }
 
   // Manual cleanup method for testing or admin use
-  manualCleanup(): { deletedCount: number } {
+  manualCleanup(): { deletedPCRCount: number; deletedLogsCount: number } {
     try {
-      console.log('🧹 Running manual PCR reports cleanup...')
+      console.log('🧹 Running manual cleanup...')
 
-      const deleteQuery = `
+      // Delete PCR reports older than configured retention
+      const pcrDeleteQuery = `
         DELETE FROM pcr_reports
         WHERE status = 'submitted'
-        AND datetime(created_at) < datetime('now', '-24 hours')
+        AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
       `
+      const pcrResult = db.prepare(pcrDeleteQuery).run()
 
-      const result = db.prepare(deleteQuery).run()
+      // Delete activity logs older than configured retention
+      const logsDeleteQuery = `
+        DELETE FROM activity_logs
+        WHERE datetime(created_at) < datetime('now', '-${this.LOG_RETENTION_DAYS} days')
+      `
+      const logsResult = db.prepare(logsDeleteQuery).run()
 
-      if (result.changes > 0) {
-        console.log(`🗑️  Manually deleted ${result.changes} PCR report(s) older than 24 hours`)
-        this.logCleanupActivity(result.changes)
+      if (pcrResult.changes > 0 || logsResult.changes > 0) {
+        console.log(`🗑️  Manually deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_HOURS} hours`)
+        console.log(`🗑️  Manually deleted ${logsResult.changes} activity log(s) older than ${this.LOG_RETENTION_DAYS} days`)
+        this.logCleanupActivity(pcrResult.changes, logsResult.changes)
       }
 
-      return { deletedCount: result.changes }
+      return {
+        deletedPCRCount: pcrResult.changes,
+        deletedLogsCount: logsResult.changes
+      }
 
     } catch (error) {
-      console.error('❌ Error during manual PCR cleanup:', error)
+      console.error('❌ Error during manual cleanup:', error)
       throw error
     }
   }
 
-  // Get count of reports that would be deleted (for preview)
-  getCleanupPreview(): { count: number, oldestDate: string | null } {
+  // Get count of reports and logs that would be deleted (for preview)
+  getCleanupPreview(): {
+    pcrCount: number;
+    oldestPCRDate: string | null;
+    logsCount: number;
+    oldestLogDate: string | null;
+  } {
     try {
-      const countQuery = `
+      const pcrQuery = `
         SELECT COUNT(*) as count, MIN(created_at) as oldestDate
         FROM pcr_reports
         WHERE status = 'submitted'
-        AND datetime(created_at) < datetime('now', '-24 hours')
+        AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
       `
+      const pcrResult = db.prepare(pcrQuery).get() as { count: number, oldestDate: string | null }
 
-      const result = db.prepare(countQuery).get() as { count: number, oldestDate: string | null }
-      return result
+      const logsQuery = `
+        SELECT COUNT(*) as count, MIN(created_at) as oldestDate
+        FROM activity_logs
+        WHERE datetime(created_at) < datetime('now', '-${this.LOG_RETENTION_DAYS} days')
+      `
+      const logsResult = db.prepare(logsQuery).get() as { count: number, oldestDate: string | null }
+
+      return {
+        pcrCount: pcrResult.count,
+        oldestPCRDate: pcrResult.oldestDate,
+        logsCount: logsResult.count,
+        oldestLogDate: logsResult.oldestDate
+      }
 
     } catch (error) {
       console.error('❌ Error getting cleanup preview:', error)

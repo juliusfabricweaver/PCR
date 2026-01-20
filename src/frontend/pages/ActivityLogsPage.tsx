@@ -144,8 +144,8 @@ const ActivityLogsPage = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      timeZone: 'Etc/GMT+8',
+    return new Date(dateString).toLocaleDateString('en-CA', {
+      timeZone: 'Etc/GMT+10',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
