@@ -145,7 +145,7 @@ const DashboardPage = () => {
             </div>
             <div className="mt-4 pt-4 border-t border-gray-200">
               <a
-                href="/pcr"
+                href="#/pcr"
                 className="text-sm font-medium text-primary-600 hover:text-primary-500"
               >
                 View all PCRs →
@@ -165,7 +165,7 @@ const DashboardPage = () => {
           <div className="card-body">
             <div className="space-y-4">
               <a
-                href="/pcr/new"
+                href="#/pcr/new"
                 className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group"
               >
                 <div className="flex-shrink-0">
@@ -181,7 +181,7 @@ const DashboardPage = () => {
 
 
               <a
-                href="/reports"
+                href="#/reports"
                 className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group"
               >
                 <div className="flex-shrink-0">

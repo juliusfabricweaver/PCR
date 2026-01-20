@@ -82,13 +82,13 @@ const ReportsPage = () => {
   const handleEditDraft = (reportId: string) => {
     // Navigate to PCR form with draft ID as URL parameter
     const params = new URLSearchParams({ draftId: reportId })
-    window.location.href = `/pcr/new?${params.toString()}`
+    window.location.hash = `/pcr/new?${params.toString()}`
   }
 
   const handleEditReport = (reportId: string) => {
     // Navigate to PCR form with report ID as URL parameter (for admin editing submitted reports)
     const params = new URLSearchParams({ reportId: reportId })
-    window.location.href = `/pcr/new?${params.toString()}`
+    window.location.hash = `/pcr/new?${params.toString()}`
   }
 
   const handleDeleteReport = async (reportId: string, status: string) => {

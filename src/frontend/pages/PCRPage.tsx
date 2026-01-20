@@ -65,7 +65,10 @@ const PCRPage: React.FC = () => {
 
   useEffect(() => {
     const loadFromUrl = async () => {
-      const urlParams = new URLSearchParams(window.location.search)
+      // For HashRouter, params are in the hash: /#/pcr/new?draftId=xxx
+      const hash = window.location.hash
+      const queryString = hash.includes('?') ? hash.split('?')[1] : ''
+      const urlParams = new URLSearchParams(queryString)
       const draftId = urlParams.get('draftId')
       const reportId = urlParams.get('reportId')
 
@@ -271,10 +274,9 @@ const PCRPage: React.FC = () => {
       // If this was a new draft, update our current draft ID
       if (!currentDraftId && responseData.data?.id) {
         setCurrentDraftId(responseData.data.id)
-        // Update URL to include draft ID for future saves
-        const newUrl = new URL(window.location.href)
-        newUrl.searchParams.set('draftId', responseData.data.id)
-        window.history.replaceState({}, '', newUrl.toString())
+        // Update URL to include draft ID for future saves (HashRouter compatible)
+        const currentHash = window.location.hash.split('?')[0] // Get path without query
+        window.location.hash = `${currentHash}?draftId=${responseData.data.id}`
       }
 
       showNotification('Draft saved successfully', 'success')

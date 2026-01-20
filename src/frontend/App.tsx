@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Layout } from '@/components/layout'
 import { Loading } from '@/components/ui'
 import { LoginPage, PCRPage, ActivityLogsPage } from '@/pages'
@@ -33,11 +33,17 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const AppContent: React.FC = () => {
   const { user, logout, isAuthenticated, isLoading } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('pcr_theme')
     return saved ? saved === 'dark' : false
   })
-  const [currentPath, setCurrentPath] = useState(window.location.pathname)
+  const [currentPath, setCurrentPath] = useState(location.pathname)
+
+  // Sync currentPath with location (for browser back/forward navigation)
+  useEffect(() => {
+    setCurrentPath(location.pathname)
+  }, [location.pathname])
 
   // Session timeout management
   useTimeout({
