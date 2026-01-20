@@ -44,6 +44,17 @@ const ReportsPage = () => {
     }
   }
 
+  // Helper function to convert base64 to File
+  const base64ToFile = (base64: string, filename: string): File => {
+    const byteCharacters = atob(base64)
+    const byteNumbers = new Array(byteCharacters.length)
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i)
+    }
+    const byteArray = new Uint8Array(byteNumbers)
+    return new File([byteArray], filename, { type: 'application/pdf' })
+  }
+
   const handleViewReport = async (reportId: string) => {
     try {
       if (!token) {
@@ -54,8 +65,14 @@ const ReportsPage = () => {
       const data = await apiRequest(`/pcr/${reportId}`)
       const reportData = data.data
 
+      // Convert sign-off attachment from base64 to File if present
+      let appendPdf: File | undefined
+      if (reportData.sign_off_attachment && reportData.sign_off_filename) {
+        appendPdf = base64ToFile(reportData.sign_off_attachment, reportData.sign_off_filename)
+      }
+
       // Show PDF preview using the existing PDF service (only admins can download)
-      await pdfService.showDownloadPreview(reportData.form_data, {}, { allowDownload: isAdmin })
+      await pdfService.showDownloadPreview(reportData.form_data, { appendPdf }, { allowDownload: isAdmin })
     } catch (err) {
       setError('Failed to load report details')
       console.error('Error loading report:', err)

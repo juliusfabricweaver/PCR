@@ -37,6 +37,32 @@ const PCRPage: React.FC = () => {
   const [signOffPdfError, setSignOffPdfError] = useState<string>('')
   const lastAutoCommentsRef = React.useRef<string>('')
 
+  // Helper function to convert File to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => {
+        const result = reader.result as string
+        // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
+        const base64 = result.split(',')[1]
+        resolve(base64)
+      }
+      reader.onerror = error => reject(error)
+    })
+  }
+
+  // Helper function to convert base64 to File
+  const base64ToFile = (base64: string, filename: string): File => {
+    const byteCharacters = atob(base64)
+    const byteNumbers = new Array(byteCharacters.length)
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i)
+    }
+    const byteArray = new Uint8Array(byteNumbers)
+    return new File([byteArray], filename, { type: 'application/pdf' })
+  }
+
   useEffect(() => {
     const loadFromUrl = async () => {
       const urlParams = new URLSearchParams(window.location.search)
@@ -54,6 +80,11 @@ const PCRPage: React.FC = () => {
           if (draftData.status === 'draft') {
             loadData(draftData.form_data)
             setLoadedStatus('draft')
+            // Restore sign-off attachment if present
+            if (draftData.sign_off_attachment && draftData.sign_off_filename) {
+              const file = base64ToFile(draftData.sign_off_attachment, draftData.sign_off_filename)
+              setSignOffPdf(file)
+            }
             showNotification('Draft loaded successfully', 'success')
           } else {
             showNotification('This report is not a draft and cannot be edited', 'error')
@@ -75,6 +106,11 @@ const PCRPage: React.FC = () => {
 
           loadData(reportData.form_data)
           setLoadedStatus(reportData.status)
+          // Restore sign-off attachment if present
+          if (reportData.sign_off_attachment && reportData.sign_off_filename) {
+            const file = base64ToFile(reportData.sign_off_attachment, reportData.sign_off_filename)
+            setSignOffPdf(file)
+          }
           showNotification('Report loaded for editing', 'success')
         } catch (error) {
           console.error('Failed to load report:', error)
@@ -119,6 +155,14 @@ const PCRPage: React.FC = () => {
             const url = reportIdToUpdate ? `/pcr/${reportIdToUpdate}` : '/submissions'
             const method = reportIdToUpdate ? 'PUT' : 'POST'
 
+            // Convert sign-off PDF to base64 if present
+            let signOffBase64: string | null = null
+            let signOffFilename: string | null = null
+            if (signOffPdf) {
+              signOffBase64 = await fileToBase64(signOffPdf)
+              signOffFilename = signOffPdf.name
+            }
+
             await apiRequest(url, {
               method,
               body: JSON.stringify(
@@ -129,14 +173,18 @@ const PCRPage: React.FC = () => {
                         downloadedAt: timestamp,
                         downloadConfirmed: true
                       },
-                      status: 'submitted'
+                      status: 'submitted',
+                      sign_off_attachment: signOffBase64,
+                      sign_off_filename: signOffFilename
                     }
                   : {
                       data: {
                         ...data,
                         downloadedAt: timestamp,
                         downloadConfirmed: true
-                      }
+                      },
+                      sign_off_attachment: signOffBase64,
+                      sign_off_filename: signOffFilename
                     }
               )
             })
@@ -148,6 +196,7 @@ const PCRPage: React.FC = () => {
                 : 'PCR form submitted successfully'
             showNotification(successMessage, 'success')
             reset()
+            setSignOffPdf(null)
           } catch (submitError) {
             console.error('Submission failed:', submitError)
             showNotification('Failed to submit PCR form to server', 'error')
@@ -201,11 +250,21 @@ const PCRPage: React.FC = () => {
       const url = currentDraftId ? `/pcr/${currentDraftId}` : '/pcr'
       const method = currentDraftId ? 'PUT' : 'POST'
 
+      // Convert sign-off PDF to base64 if present
+      let signOffBase64: string | null = null
+      let signOffFilename: string | null = null
+      if (signOffPdf) {
+        signOffBase64 = await fileToBase64(signOffPdf)
+        signOffFilename = signOffPdf.name
+      }
+
       const responseData = await apiRequest(url, {
         method,
         body: JSON.stringify({
           form_data: data,
-          status: 'draft'
+          status: 'draft',
+          sign_off_attachment: signOffBase64,
+          sign_off_filename: signOffFilename
         })
       })
 

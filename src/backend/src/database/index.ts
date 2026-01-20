@@ -18,11 +18,32 @@ export class DatabaseManager {
     this.database.pragma('synchronous = NORMAL');
     this.database.pragma('foreign_keys = ON');
     this.initializeSchema();
+    this.runMigrations();
   }
 
   private initializeSchema(): void {
     const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
     this.database.exec(schema);
+  }
+
+  private runMigrations(): void {
+    // Migration: Add sign-off attachment columns if they don't exist
+    try {
+      const tableInfo = this.database.prepare('PRAGMA table_info(pcr_reports)').all() as Array<{ name: string }>;
+      const columnNames = tableInfo.map(col => col.name);
+
+      if (!columnNames.includes('sign_off_attachment')) {
+        this.database.exec('ALTER TABLE pcr_reports ADD COLUMN sign_off_attachment TEXT');
+        console.log('Migration: Added sign_off_attachment column to pcr_reports');
+      }
+
+      if (!columnNames.includes('sign_off_filename')) {
+        this.database.exec('ALTER TABLE pcr_reports ADD COLUMN sign_off_filename TEXT');
+        console.log('Migration: Added sign_off_filename column to pcr_reports');
+      }
+    } catch (error) {
+      console.error('Migration error:', error);
+    }
   }
 
   getDb(): Database.Database {

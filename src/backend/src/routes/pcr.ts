@@ -99,7 +99,7 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
 // POST /api/pcr - Create new PCR report
 router.post('/', authenticateToken, logActivity('create_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { form_data, status = 'draft' } = req.body;
+    const { form_data, status = 'draft', sign_off_attachment, sign_off_filename } = req.body;
 
     if (!form_data) {
       return res.status(400).json({ success: false, message: 'Form data required' });
@@ -108,9 +108,16 @@ router.post('/', authenticateToken, logActivity('create_pcr', 'pcr_report'), (re
     const reportId = generateId();
 
     db.prepare(`
-      INSERT INTO pcr_reports (id, form_data, status, created_by)
-      VALUES (?, ?, ?, ?)
-    `).run(reportId, JSON.stringify(form_data), status, req.user!.id);
+      INSERT INTO pcr_reports (id, form_data, sign_off_attachment, sign_off_filename, status, created_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      reportId,
+      JSON.stringify(form_data),
+      sign_off_attachment || null,
+      sign_off_filename || null,
+      status,
+      req.user!.id
+    );
 
     const newReport = db.prepare('SELECT * FROM pcr_reports WHERE id = ?').get(reportId) as any;
 
@@ -132,7 +139,7 @@ router.post('/', authenticateToken, logActivity('create_pcr', 'pcr_report'), (re
 router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { form_data, status } = req.body;
+    const { form_data, status, sign_off_attachment, sign_off_filename } = req.body;
 
     // Fetch report without filtering by created_by
     const existingReport = db.prepare(`
@@ -169,6 +176,17 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
     if (status) {
       updateFields.push('status = ?');
       updateValues.push(status);
+    }
+
+    // Handle sign-off attachment - allow setting to null to remove it
+    if (sign_off_attachment !== undefined) {
+      updateFields.push('sign_off_attachment = ?');
+      updateValues.push(sign_off_attachment || null);
+    }
+
+    if (sign_off_filename !== undefined) {
+      updateFields.push('sign_off_filename = ?');
+      updateValues.push(sign_off_filename || null);
     }
 
     updateFields.push('updated_at = CURRENT_TIMESTAMP');
@@ -234,7 +252,7 @@ router.delete('/:id', authenticateToken, logActivity('delete_pcr', 'pcr_report')
 // POST /api/submissions - Submit PCR (for compatibility with frontend)
 router.post('/submit', authenticateToken, logActivity('submit_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
   try {
-    const formData = req.body.data;
+    const { data: formData, sign_off_attachment, sign_off_filename } = req.body;
 
     if (!formData) {
       return res.status(400).json({ success: false, message: 'Form data required' });
@@ -242,11 +260,18 @@ router.post('/submit', authenticateToken, logActivity('submit_pcr', 'pcr_report'
 
     const reportId = generateId();
 
-    // Create as submitted report
+    // Create as submitted report with optional sign-off attachment
     db.prepare(`
-      INSERT INTO pcr_reports (id, form_data, status, created_by)
-      VALUES (?, ?, ?, ?)
-    `).run(reportId, JSON.stringify(formData), 'submitted', req.user!.id);
+      INSERT INTO pcr_reports (id, form_data, sign_off_attachment, sign_off_filename, status, created_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      reportId,
+      JSON.stringify(formData),
+      sign_off_attachment || null,
+      sign_off_filename || null,
+      'submitted',
+      req.user!.id
+    );
 
     res.status(201).json({
       success: true,

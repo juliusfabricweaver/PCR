@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS pcr_reports (
     id TEXT PRIMARY KEY,
     form_data TEXT NOT NULL, -- JSON blob of all form data (PCRFormData)
+    sign_off_attachment TEXT, -- Base64 encoded PDF of patient signature (optional)
+    sign_off_filename TEXT, -- Original filename of the sign-off attachment
     status TEXT CHECK (status IN ('draft', 'completed', 'submitted')) DEFAULT 'draft',
     created_by TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -47,3 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_at ON pcr_reports(created_at)
 CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at);
+
+-- Migration: Add sign-off attachment columns to existing pcr_reports table
+-- These will silently fail if columns already exist (SQLite behavior)
+-- Note: Run these manually if schema was created before this update
