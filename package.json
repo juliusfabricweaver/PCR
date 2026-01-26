@@ -114,8 +114,8 @@
     "appId": "com.pcr.application",
     "productName": "PCR Application",
     "copyright": "Copyright © 2025",
-    "npmRebuild": true,
-    "buildDependenciesFromSource": true,
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false,
     "asarUnpack": [
       "**/node_modules/**/*",
       "**/dist/backend/**/*",
