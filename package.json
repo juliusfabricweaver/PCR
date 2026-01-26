@@ -115,7 +115,7 @@
     "npmRebuild": false,
     "buildDependenciesFromSource": false,
     "asarUnpack": [
-      "**/node_modules/**/*",
+      "**/node_modules/sql.js/**/*",
       "**/dist/backend/**/*",
       "**/initial_database.db"
     ],

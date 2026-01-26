@@ -10,6 +10,20 @@ const isElectron = process.env.IS_ELECTRON === 'true';
 const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), 'pcr_database.db');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
+// Get the path to sql.js WASM file
+function getWasmPath(): string {
+  if (isElectron) {
+    // In packaged Electron app, look in resources
+    const resourcesPath = (process as any).resourcesPath || path.join(__dirname, '../../../../..');
+    const wasmInResources = path.join(resourcesPath, 'app.asar.unpacked', 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+    if (fs.existsSync(wasmInResources)) {
+      return wasmInResources;
+    }
+  }
+  // Default: look in node_modules
+  return path.join(__dirname, '../../../../node_modules/sql.js/dist/sql-wasm.wasm');
+}
+
 // Statement wrapper to mimic better-sqlite3 API
 class StatementWrapper {
   private db: SqlJsDatabase;
@@ -172,8 +186,12 @@ export class DatabaseManager {
 
   private async initialize(): Promise<void> {
     try {
-      // Initialize sql.js
-      const SQL = await initSqlJs();
+      // Initialize sql.js with WASM file path
+      const wasmPath = getWasmPath();
+      console.log('Loading sql.js WASM from:', wasmPath);
+
+      const wasmBinary = fs.readFileSync(wasmPath);
+      const SQL = await initSqlJs({ wasmBinary });
 
       // Load existing database or create new one
       let db: SqlJsDatabase;
