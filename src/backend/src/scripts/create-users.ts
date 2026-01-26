@@ -1,5 +1,5 @@
-import bcrypt from 'bcrypt';
-import db from '../database';
+import bcrypt from 'bcryptjs';
+import { initDatabase, getDatabase } from '../database';
 
 // Generate simple ID
 function generateId(prefix: string): string {
@@ -10,11 +10,15 @@ async function createDefaultUsers() {
   console.log('Creating default users...');
 
   try {
+    // Wait for database to initialize
+    await initDatabase();
+    const db = getDatabase();
+
     // Check if admin user already exists
     const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
 
     if (!existingAdmin) {
-      const adminPasswordHash = await bcrypt.hash('admin', 10);
+      const adminPasswordHash = await bcrypt.hash('vcrt-ebic2026!', 10);
 
       db.prepare(`
         INSERT INTO users (id, username, password_hash, first_name, last_name, role, is_active)
@@ -29,7 +33,7 @@ async function createDefaultUsers() {
         1
       );
 
-      console.log('✅ Admin user created (username: admin, password: admin)');
+      console.log('✅ Admin user created (username: admin, password: vcrt-ebic2026!)');
     } else {
       console.log('ℹ️ Admin user already exists');
     }
@@ -58,9 +62,13 @@ async function createDefaultUsers() {
       console.log('ℹ️ Regular user already exists');
     }
 
+    // Force save to disk before exiting
+    db.saveToFile();
+    console.log('💾 Database saved');
+
     console.log('\n🎉 Default users setup complete!');
     console.log('You can now login with:');
-    console.log('  Admin: username=admin, password=admin');
+    console.log('  Admin: username=admin, password=vcrt-ebic2026!');
     console.log('  User:  username=user, password=user');
 
   } catch (error) {

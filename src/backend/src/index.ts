@@ -10,7 +10,7 @@ import userRoutes from './routes/users';
 import logsRoutes from './routes/logs';
 
 // Import database to initialize
-import './database';
+import { initDatabase } from './database';
 import { cleanupService } from './services/cleanup';
 
 const app = express();
@@ -96,21 +96,35 @@ app.use((req: express.Request, res: express.Response) => {
   });
 });
 
-// Start server
-const server = app.listen(PORT, () => {
-  const actualPort = (server.address() as any).port;
-  console.log(`🚀 PCR API Server running on port ${actualPort}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${actualPort}/api/health`);
+// Start server (after database initialization)
+async function startServer() {
+  try {
+    // Wait for database to initialize (sql.js is async)
+    console.log('Initializing database...');
+    await initDatabase();
+    console.log('Database initialized');
 
-  // Notify Electron main process of server port if running in Electron
-  if (isElectron && process.send) {
-    process.send({ type: 'server-ready', port: actualPort });
+    const server = app.listen(PORT, () => {
+      const actualPort = (server.address() as any).port;
+      console.log(`🚀 PCR API Server running on port ${actualPort}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Health check: http://localhost:${actualPort}/api/health`);
+
+      // Notify Electron main process of server port if running in Electron
+      if (isElectron && process.send) {
+        process.send({ type: 'server-ready', port: actualPort });
+      }
+
+      // Start cleanup service
+      cleanupService.start();
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
+}
 
-  // Start cleanup service
-  cleanupService.start();
-});
+startServer();
 
 // Graceful shutdown
 process.on('SIGINT', () => {
