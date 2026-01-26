@@ -190,7 +190,8 @@ export class DatabaseManager {
       const wasmPath = getWasmPath();
       console.log('Loading sql.js WASM from:', wasmPath);
 
-      const wasmBinary = fs.readFileSync(wasmPath);
+      const wasmBuffer = fs.readFileSync(wasmPath);
+      const wasmBinary = wasmBuffer.buffer.slice(wasmBuffer.byteOffset, wasmBuffer.byteOffset + wasmBuffer.byteLength);
       const SQL = await initSqlJs({ wasmBinary });
 
       // Load existing database or create new one
