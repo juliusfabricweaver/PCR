@@ -8,7 +8,60 @@ const isElectron = process.env.IS_ELECTRON === 'true';
 
 // Database path: Use env var if in Electron, otherwise use current working directory
 const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), 'pcr_database.db');
-const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
+
+// Embedded schema - avoids file read issues in packaged Electron apps
+const SCHEMA_SQL = `
+-- PCR Application Database Schema
+
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    role TEXT CHECK (role IN ('admin', 'user')) DEFAULT 'user',
+    is_active BOOLEAN DEFAULT true,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_login DATETIME
+);
+
+-- PCR Reports/Drafts table (single table for both drafts and completed reports)
+CREATE TABLE IF NOT EXISTS pcr_reports (
+    id TEXT PRIMARY KEY,
+    form_data TEXT NOT NULL,
+    sign_off_attachment TEXT,
+    sign_off_filename TEXT,
+    status TEXT CHECK (status IN ('draft', 'completed', 'submitted')) DEFAULT 'draft',
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+-- Activity logs table
+CREATE TABLE IF NOT EXISTS activity_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    resource_type TEXT,
+    resource_id TEXT,
+    details TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_by ON pcr_reports(created_by);
+CREATE INDEX IF NOT EXISTS idx_pcr_reports_status ON pcr_reports(status);
+CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_at ON pcr_reports(created_at);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at);
+`;
 
 // Statement wrapper to mimic better-sqlite3 API
 class StatementWrapper {
@@ -211,8 +264,7 @@ export class DatabaseManager {
 
   private initializeSchema(): void {
     if (!this.database) return;
-    const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
-    this.database.exec(schema);
+    this.database.exec(SCHEMA_SQL);
   }
 
   private runMigrations(): void {
