@@ -231,7 +231,7 @@ const PCRPage: React.FC = () => {
   }
 
   const handleReset = () => {
-    if (isDirty) {
+    if (isDirty || signOffPdf) {
       setShowUnsavedChangesModal(true)
     } else {
       reset()
@@ -241,6 +241,8 @@ const PCRPage: React.FC = () => {
 
   const confirmReset = () => {
     reset()
+    setSignOffPdf(null)
+    setSignOffPdfError('')
     setShowUnsavedChangesModal(false)
     showNotification('Form reset successfully', 'success')
   }
