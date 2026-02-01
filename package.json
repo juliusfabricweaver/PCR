@@ -28,7 +28,7 @@
     "electron:start": "concurrently \"npm run frontend:dev\" \"npm run electron:dev\"",
     "electron:package": "npm run build && npm run electron:build && electron-builder",
     "electron:package:mac": "npm run build && npm run electron:build && electron-builder --mac",
-    "electron:package:win": "npm run build && npm run electron:build && electron-builder --win",
+    "electron:package:win": "npm run build && npm run electron:build && electron-builder --win --x64",
     "electron:package:linux": "npm run build && npm run electron:build && electron-builder --linux"
   },
   "keywords": [
