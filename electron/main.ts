@@ -6,6 +6,26 @@ import * as fs from 'fs';
 // Environment detection
 const isDev = process.env.NODE_ENV === 'development';
 
+// Debug logging to file (for Windows debugging)
+const logFile = path.join(app.getPath('userData'), 'debug.log');
+function log(message: string): void {
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] ${message}\n`;
+  console.log(message);
+  try {
+    fs.appendFileSync(logFile, logMessage);
+  } catch (e) {
+    // Ignore write errors
+  }
+}
+
+// Clear log on startup
+try {
+  fs.writeFileSync(logFile, `=== PCR Application Started ===\n`);
+} catch (e) {
+  // Ignore
+}
+
 let mainWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess | null = null;
 let serverPort: number = 0;
@@ -56,12 +76,17 @@ async function startBackend(): Promise<void> {
       ? path.join(__dirname, '../../src/backend/src/index.ts')
       : path.join(process.resourcesPath, 'app.asar.unpacked/dist/backend/backend/src/index.js');
 
+    log(`Backend path: ${backendPath}`);
+    log(`Resources path: ${process.resourcesPath}`);
+    log(`__dirname: ${__dirname}`);
+
     // Check if backend file exists
     if (!fs.existsSync(backendPath)) {
-      console.error(`Backend file not found: ${backendPath}`);
+      log(`ERROR: Backend file not found: ${backendPath}`);
       reject(new Error(`Backend file not found: ${backendPath}`));
       return;
     }
+    log('Backend file exists');
 
     // Set environment variables for backend
     const env = {
@@ -89,24 +114,29 @@ async function startBackend(): Promise<void> {
 
     // Listen for server ready message
     backendProcess.on('message', (message: any) => {
+      log(`Backend message: ${JSON.stringify(message)}`);
       if (message.type === 'server-ready') {
         serverPort = message.port;
-        console.log(`Backend server started on port ${serverPort}`);
+        log(`Backend server started on port ${serverPort}`);
         resolve();
       }
     });
 
     // Handle backend process errors
     backendProcess.on('error', (error) => {
-      console.error('Backend process error:', error);
+      log(`Backend process error: ${error.message}`);
       reject(error);
     });
 
     // Handle backend process exit
     backendProcess.on('exit', (code, signal) => {
-      console.log(`Backend process exited with code ${code} and signal ${signal}`);
+      log(`Backend process exited with code ${code} and signal ${signal}`);
       backendProcess = null;
     });
+
+    // Capture stdout/stderr from backend
+    backendProcess.stdout?.on('data', (data) => log(`Backend stdout: ${data}`));
+    backendProcess.stderr?.on('data', (data) => log(`Backend stderr: ${data}`));
 
     // Timeout if backend doesn't start in 30 seconds
     setTimeout(() => {
@@ -244,13 +274,18 @@ ipcMain.on('close-window', () => {
  * App ready - start backend and create window
  */
 app.whenReady().then(async () => {
+  log('App ready');
+  log(`User data path: ${app.getPath('userData')}`);
   try {
-    console.log('Starting backend server...');
+    log('Starting backend server...');
     await startBackend();
-    console.log('Creating main window...');
+    log('Backend started successfully');
+    log('Creating main window...');
     createWindow();
+    log('Window created');
   } catch (error) {
-    console.error('Failed to start application:', error);
+    log(`FATAL: Failed to start application: ${(error as Error).message}`);
+    log(`Stack: ${(error as Error).stack}`);
     app.quit();
   }
 
@@ -283,9 +318,10 @@ app.on('before-quit', () => {
  * Handle uncaught errors
  */
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught exception:', error);
+  log(`Uncaught exception: ${error.message}`);
+  log(`Stack: ${error.stack}`);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled rejection at:', promise, 'reason:', reason);
+  log(`Unhandled rejection: ${reason}`);
 });
