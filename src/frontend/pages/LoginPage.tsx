@@ -64,7 +64,7 @@ const LoginPage: React.FC = () => {
           <div className="flex justify-start">
             <img
               src="./images/vcrt_logo.png"
-              alt="PCR System"
+              alt="Patient Care Report"
               className="h-48 xl:h-56 w-auto object-contain drop-shadow-sm"
             />
           </div>
@@ -138,7 +138,7 @@ const LoginPage: React.FC = () => {
             <Card.Footer>
               <div className="space-y-4">
                 <div className="text-center text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                  <p>© 2026 PCR System</p>
+                  <p>© 2026 Patient Care Report</p>
                 </div>
               </div>
             </Card.Footer>

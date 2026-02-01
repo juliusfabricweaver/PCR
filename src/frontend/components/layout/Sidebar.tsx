@@ -134,7 +134,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               className="h-6 md:h-8 w-auto object-contain rounded-md"
             />
             <span className="ml-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
-              PCR System
+              Patient Care Report
             </span>
           </div>
 
