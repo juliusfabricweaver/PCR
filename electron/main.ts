@@ -1,6 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'path';
-import { ChildProcess, fork } from 'child_process';
 import * as fs from 'fs';
 
 // Environment detection
@@ -22,18 +21,92 @@ function log(message: string): void {
 // Clear log on startup
 try {
   fs.writeFileSync(logFile, `=== PCR Application Started ===\n`);
+  log(`Platform: ${process.platform}`);
+  log(`Arch: ${process.arch}`);
+  log(`Electron: ${process.versions.electron}`);
+  log(`Node: ${process.versions.node}`);
+  log(`isDev: ${isDev}`);
 } catch (e) {
   // Ignore
 }
 
 let mainWindow: BrowserWindow | null = null;
-let backendProcess: ChildProcess | null = null;
 let serverPort: number = 0;
+
+// Backend module - will be loaded dynamically
+let backendModule: { startEmbeddedServer: (dbPath?: string) => Promise<number>; stopEmbeddedServer: () => void } | null = null;
+
+/**
+ * Load and start the backend server embedded in main process
+ */
+async function startBackend(): Promise<void> {
+  log('Starting embedded backend server...');
+
+  // Set environment variables before loading backend
+  process.env.IS_ELECTRON = 'true';
+  process.env.NODE_ENV = isDev ? 'development' : 'production';
+  process.env.DATABASE_PATH = path.join(app.getPath('userData'), 'pcr_database.db');
+
+  log(`Database path: ${process.env.DATABASE_PATH}`);
+  log(`User data path: ${app.getPath('userData')}`);
+
+  try {
+    // Dynamically load the backend module
+    let backendPath: string;
+
+    if (isDev) {
+      // In development, use ts-node register
+      require('ts-node/register/transpile-only');
+      // __dirname is dist/electron/ when running compiled, so go up two levels to project root
+      backendPath = path.join(__dirname, '..', '..', 'src', 'backend', 'src', 'index');
+      log(`Dev backend path: ${backendPath}`);
+    } else {
+      // In production, load compiled JS from asar.unpacked
+      backendPath = path.join(process.resourcesPath, 'app.asar.unpacked/dist/backend/backend/src/index.js');
+      log(`Prod backend path: ${backendPath}`);
+
+      // Check if file exists
+      if (!fs.existsSync(backendPath)) {
+        throw new Error(`Backend file not found: ${backendPath}`);
+      }
+    }
+
+    // Load the backend module
+    log('Loading backend module...');
+    backendModule = require(backendPath);
+    log('Backend module loaded');
+
+    // Start the embedded server
+    log('Starting embedded server...');
+    serverPort = await backendModule!.startEmbeddedServer(process.env.DATABASE_PATH);
+    log(`Backend server started on port ${serverPort}`);
+  } catch (error) {
+    log(`ERROR starting backend: ${(error as Error).message}`);
+    log(`Stack: ${(error as Error).stack}`);
+    throw error;
+  }
+}
+
+/**
+ * Stop the backend server
+ */
+function stopBackend(): void {
+  if (backendModule) {
+    try {
+      backendModule.stopEmbeddedServer();
+      log('Backend server stopped');
+    } catch (e) {
+      log(`Error stopping backend: ${(e as Error).message}`);
+    }
+  }
+}
 
 /**
  * Create the main application window
  */
 function createWindow(): void {
+  log('Creating main window...');
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -43,118 +116,45 @@ function createWindow(): void {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true,
+      sandbox: false, // Needed for preload to work properly
       webSecurity: true,
       allowRunningInsecureContent: false,
     },
     title: 'PCR Application',
     icon: path.join(__dirname, '../../assets/icon.png'),
+    show: false, // Don't show until ready
+  });
+
+  // Show window when ready to prevent flash
+  mainWindow.once('ready-to-show', () => {
+    log('Window ready to show');
+    mainWindow?.show();
   });
 
   // Load the app
   if (isDev) {
     // In development, load from Vite dev server
+    log('Loading from Vite dev server...');
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
     // In production, load from built files
-    mainWindow.loadFile(path.join(__dirname, '../frontend/index.html'));
+    const indexPath = path.join(__dirname, '../frontend/index.html');
+    log(`Loading from file: ${indexPath}`);
+    mainWindow.loadFile(indexPath);
   }
+
+  // Handle load errors
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    log(`Failed to load: ${errorCode} - ${errorDescription}`);
+  });
 
   // Handle window close
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-}
 
-/**
- * Start the Express backend server
- */
-async function startBackend(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const backendPath = isDev
-      ? path.join(__dirname, '../../src/backend/src/index.ts')
-      : path.join(process.resourcesPath, 'app.asar.unpacked/dist/backend/backend/src/index.js');
-
-    log(`Backend path: ${backendPath}`);
-    log(`Resources path: ${process.resourcesPath}`);
-    log(`__dirname: ${__dirname}`);
-
-    // Check if backend file exists
-    if (!fs.existsSync(backendPath)) {
-      log(`ERROR: Backend file not found: ${backendPath}`);
-      reject(new Error(`Backend file not found: ${backendPath}`));
-      return;
-    }
-    log('Backend file exists');
-
-    // Set environment variables for backend
-    const env = {
-      ...process.env,
-      IS_ELECTRON: 'true',
-      NODE_ENV: isDev ? 'development' : 'production',
-      DATABASE_PATH: path.join(app.getPath('userData'), 'pcr_database.db'),
-    };
-
-    // Fork the backend process
-    if (isDev) {
-      // In development, use ts-node to run TypeScript directly
-      backendProcess = fork(backendPath, [], {
-        env,
-        execArgv: ['-r', 'ts-node/register', '--transpile-only'],
-        stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
-      });
-    } else {
-      // In production, run compiled JavaScript
-      backendProcess = fork(backendPath, [], {
-        env,
-        stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
-      });
-    }
-
-    // Listen for server ready message
-    backendProcess.on('message', (message: any) => {
-      log(`Backend message: ${JSON.stringify(message)}`);
-      if (message.type === 'server-ready') {
-        serverPort = message.port;
-        log(`Backend server started on port ${serverPort}`);
-        resolve();
-      }
-    });
-
-    // Handle backend process errors
-    backendProcess.on('error', (error) => {
-      log(`Backend process error: ${error.message}`);
-      reject(error);
-    });
-
-    // Handle backend process exit
-    backendProcess.on('exit', (code, signal) => {
-      log(`Backend process exited with code ${code} and signal ${signal}`);
-      backendProcess = null;
-    });
-
-    // Capture stdout/stderr from backend
-    backendProcess.stdout?.on('data', (data) => log(`Backend stdout: ${data}`));
-    backendProcess.stderr?.on('data', (data) => log(`Backend stderr: ${data}`));
-
-    // Timeout if backend doesn't start in 30 seconds
-    setTimeout(() => {
-      if (serverPort === 0) {
-        reject(new Error('Backend server failed to start within 30 seconds'));
-      }
-    }, 30000);
-  });
-}
-
-/**
- * Stop the backend server
- */
-function stopBackend(): void {
-  if (backendProcess) {
-    backendProcess.kill();
-    backendProcess = null;
-  }
+  log('Window created');
 }
 
 // IPC Handlers
@@ -275,18 +275,23 @@ ipcMain.on('close-window', () => {
  */
 app.whenReady().then(async () => {
   log('App ready');
-  log(`User data path: ${app.getPath('userData')}`);
+
   try {
-    log('Starting backend server...');
     await startBackend();
-    log('Backend started successfully');
-    log('Creating main window...');
     createWindow();
-    log('Window created');
   } catch (error) {
-    log(`FATAL: Failed to start application: ${(error as Error).message}`);
+    const errorMessage = (error as Error).message || 'Unknown error';
+    log(`FATAL: Failed to start application: ${errorMessage}`);
     log(`Stack: ${(error as Error).stack}`);
+
+    // Show error dialog to user instead of silent quit
+    dialog.showErrorBox(
+      'Failed to Start Application',
+      `The application failed to start:\n\n${errorMessage}\n\nCheck the log file at:\n${logFile}`
+    );
+
     app.quit();
+    return;
   }
 
   // macOS: Re-create window when dock icon is clicked
