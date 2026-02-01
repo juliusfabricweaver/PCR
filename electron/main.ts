@@ -322,6 +322,6 @@ process.on('uncaughtException', (error) => {
   log(`Stack: ${error.stack}`);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   log(`Unhandled rejection: ${reason}`);
 });
