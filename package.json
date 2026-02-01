@@ -146,7 +146,7 @@
         "nsis",
         "portable"
       ],
-      "icon": "assets/icon-256.png"
+      "icon": "assets/icon.ico"
     },
     "linux": {
       "target": [
