@@ -200,6 +200,11 @@ const PCRPage: React.FC = () => {
             showNotification(successMessage, 'success')
             reset()
             setSignOffPdf(null)
+            // Clear state and URL to start fresh
+            setCurrentReportId(null)
+            setCurrentDraftId(null)
+            setLoadedStatus(null)
+            window.location.hash = '#/pcr/new'
           } catch (submitError) {
             console.error('Submission failed:', submitError)
             showNotification('Failed to submit PCR form to server', 'error')
@@ -497,7 +502,7 @@ const PCRPage: React.FC = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-8" noValidate>
         {isLoadingDraft && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
