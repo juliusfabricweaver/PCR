@@ -1118,11 +1118,10 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         {/* Additional Information */}
-        <FormSection 
+        <FormSection
           title={
-            <div className="flex items-center gap-2">
+            <span className="flex items-center gap-2">
               <span>Additional Information</span>
-
               <Button
                 type="button"
                 variant="outline"
@@ -1132,7 +1131,7 @@ const PCRPage: React.FC = () => {
               >
                 Fill Sample
               </Button>
-            </div>
+            </span>
           }
           subtitle="Call details and patient transfer information"
           required
