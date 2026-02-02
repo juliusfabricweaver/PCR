@@ -428,6 +428,14 @@ const PCRPage: React.FC = () => {
     showNotification('Sample data filled for testing', 'info')
   }
 
+  // Fill only the "Additional Information" textareas
+  const fillAdditionalInfoSample = () => {
+    updateField('comments', 'BLA BLA BLA')
+    updateField('transferComments', 'BLA BLA BLA')
+
+    showNotification('Filled sample text for Additional Information', 'info')
+  }
+
   // Drop-box for sign-off
   const validateAndSetSignOff = (file: File | null) => {
     setSignOffPdfError('')
@@ -1045,9 +1053,6 @@ const PCRPage: React.FC = () => {
             
             <Input
               label="Scale (1-10)"
-              type="number"
-              min="1"
-              max="10"
               value={data.scale || ''}
               onChange={(e) => updateField('scale', e.target.value)}
               placeholder="Pain scale"
@@ -1114,7 +1119,21 @@ const PCRPage: React.FC = () => {
 
         {/* Additional Information */}
         <FormSection 
-          title="Additional Information" 
+          title={
+            <div className="flex items-center gap-2">
+              <span>Additional Information</span>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={fillAdditionalInfoSample}
+              >
+                Fill Sample
+              </Button>
+            </div>
+          }
           subtitle="Call details and patient transfer information"
           required
         >

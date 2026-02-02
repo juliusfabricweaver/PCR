@@ -27,130 +27,135 @@ interface PDFGenerationResult {
   size: number
 }
 
-// Helper: ensures enough space on page
-const PAGE_GUARD = 6;
-function ensureSpaceFor(pdf: jsPDF, options: Required<PDFOptions>, y: number, needed: number) {
-  const pageH = pdf.internal.pageSize.getHeight()
-  const bottom = options.margins.bottom + PAGE_GUARD
-  if (y + needed > pageH - bottom) {
-    pdf.addPage()
-    return options.margins.top
-  }
-  return y
-}
+type NewPageFn = () => number
 
-// Helper: render a row of fields with column spans
-function renderFieldsRow(
-  pdf: jsPDF,
-  fields: { label: string; value: string | number }[],
-  spans: number[],
-  y: number,
-  options: Required<PDFOptions>,
-  contentWidth: number
-): number {
-  const colUnit = contentWidth / 4
-  let x = options.margins.left
-
-  // compute line height in mm
-  const lineH = pdf.getLineHeightFactor() * (pdf.getFontSize() * 0.3528)
-  let neededLinesMax = 1
-
-  // First pass: measure how many lines each value will wrap to
-  const measured = fields.map((field, i) => {
-    const span = spans[i] || 1
-    const maxWidth = colUnit * span
-    pdf.setFont('helvetica', 'bold')
-    const label = field.label ?? ''
-    const labelW = pdf.getTextWidth(label + ' ')
-    const valueMaxW = Math.max(4, maxWidth - labelW)
-
-    const raw = String(field.value ?? '')
-    pdf.setFont('helvetica', 'normal')
-    const lines = pdf.splitTextToSize(raw, valueMaxW)
-    neededLinesMax = Math.max(neededLinesMax, Math.max(1, lines.length))
-
-    return { label, labelW, valueMaxW, lines, maxWidth }
-  })
-
-  // ensure page break if needed
-  const pageH = pdf.internal.pageSize.getHeight()
-  const bottom = options.margins.bottom
-  const neededHeight = neededLinesMax * lineH
-  if (y + neededHeight > pageH - bottom) {
-    pdf.addPage()
-    y = options.margins.top
-  }
-
-  // Second pass: draw
-  let xCursor = options.margins.left
-  measured.forEach((m, i) => {
-    // label
-    pdf.setFont('helvetica', 'bold')
-    pdf.text(m.label, xCursor, y)
-
-    // value
-    pdf.setFont('helvetica', 'normal')
-    const xVal = xCursor + m.labelW
-    m.lines.forEach((ln, idx) => {
-      pdf.text(ln, xVal, y + idx * lineH)
-    })
-
-    xCursor += m.maxWidth
-  })
-
-  return y + neededHeight + 1 // small spacer
-}
-
-	// Add this helper near renderFieldsRow
-	function renderMultilineBlock(
+  // Helper: ensures enough space on page
+  const PAGE_GUARD = 6;
+  function ensureSpaceFor(
     pdf: jsPDF,
-    label: string,
-    value: string,
+    options: Required<PDFOptions>,
+    y: number,
+    needed: number,
+    newPage: NewPageFn
+  ) {
+    const pageH = pdf.internal.pageSize.getHeight()
+    const bottom = options.margins.bottom + PAGE_GUARD
+    if (y + needed > pageH - bottom) {
+      return newPage()
+    }
+    return y
+  }
+
+  // Helper: render a row of fields with column spans
+  function renderFieldsRow(
+    pdf: jsPDF,
+    fields: { label: string; value: string | number }[],
+    spans: number[],
     y: number,
     options: Required<PDFOptions>,
-    contentWidth: number
+    contentWidth: number,
+    newPage: NewPageFn
   ): number {
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const left = options.margins.left;
-    const bottom = options.margins.bottom;
-    const lineHeight = pdf.getLineHeightFactor() * (pdf.getFontSize() * 0.3528);
+    const colUnit = contentWidth / 4
 
-    // Ensure there's space for at least one line
-    if (y + lineHeight > pageHeight - bottom) {
-      pdf.addPage();
-      y = options.margins.top;
+    const lineH = pdf.getLineHeightFactor() * (pdf.getFontSize() * 0.3528)
+    let neededLinesMax = 1
+
+    const measured = fields.map((field, i) => {
+      const span = spans[i] || 1
+      const maxWidth = colUnit * span
+
+      pdf.setFont('helvetica', 'bold')
+      const label = field.label ?? ''
+      const labelW = pdf.getTextWidth(label + ' ')
+      const valueMaxW = Math.max(4, maxWidth - labelW)
+
+      const raw = String(field.value ?? '')
+      pdf.setFont('helvetica', 'normal')
+      const lines = pdf.splitTextToSize(raw, valueMaxW)
+      neededLinesMax = Math.max(neededLinesMax, Math.max(1, lines.length))
+
+      return { label, labelW, lines, maxWidth }
+    })
+
+    const pageH = pdf.internal.pageSize.getHeight()
+    const bottom = options.margins.bottom
+    const neededHeight = neededLinesMax * lineH
+
+    if (y + neededHeight > pageH - bottom) {
+      y = newPage()
     }
 
-    // Draw label (bold)
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(label, left, y);
+    let xCursor = options.margins.left
+    measured.forEach((m) => {
+      pdf.setFont('helvetica', 'bold')
+      pdf.text(m.label, xCursor, y)
 
-    // Wrap value to remaining width
-    const labelWidth = pdf.getTextWidth(label + ' ');
-    const valueMaxWidth = Math.max(10, contentWidth - labelWidth);
-    const lines = pdf.splitTextToSize(value || '', valueMaxWidth);
+      pdf.setFont('helvetica', 'normal')
+      const xVal = xCursor + m.labelW
+      m.lines.forEach((ln, idx) => {
+        pdf.text(ln, xVal, y + idx * lineH)
+      })
 
-    // Draw value (normal), aligned to the right of the label
-    pdf.setFont('helvetica', 'normal');
-    const xVal = left + labelWidth;
+      xCursor += m.maxWidth
+    })
 
-    if (lines.length === 0) {
-      // keep the row height even when empty
-      y += lineHeight + 2;
-      return y;
-    }
-
-    for (let i = 0; i < lines.length; i++) {
-      if (y + lineHeight > pageHeight - bottom) {
-        pdf.addPage();
-        y = options.margins.top;
-      }
-      pdf.text(lines[i], xVal, y);
-      y += lineHeight;
-    }
-
-    return y + 1; // small spacer after the block
+    return y + neededHeight + 1
   }
+
+// Add this helper near renderFieldsRow
+function renderMultilineBlock(
+  pdf: jsPDF,
+  label: string,
+  value: string,
+  y: number,
+  options: Required<PDFOptions>,
+  contentWidth: number,
+  newPage: NewPageFn
+): number {
+  const pageHeight = pdf.internal.pageSize.getHeight()
+  const left = options.margins.left
+  const bottom = options.margins.bottom
+  const lineHeight = pdf.getLineHeightFactor() * (pdf.getFontSize() * 0.3528)
+
+  // Ensure there's space for at least one line
+  if (y + lineHeight > pageHeight - bottom) {
+    y = newPage()
+  }
+
+  // Draw label (bold)
+  pdf.setFont('helvetica', 'bold')
+  pdf.text(label, left, y)
+
+  // Wrap value to remaining width
+  const labelWidth = pdf.getTextWidth(label + ' ')
+  const valueMaxWidth = Math.max(10, contentWidth - labelWidth)
+  const lines = pdf.splitTextToSize(value || '', valueMaxWidth)
+
+  // Draw value (normal)
+  pdf.setFont('helvetica', 'normal')
+  const xVal = left + labelWidth
+
+  if (lines.length === 0) {
+    return y + lineHeight + 2
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    if (y + lineHeight > pageHeight - bottom) {
+      y = newPage()
+
+      // optional but nice: re-print label when it spills onto a new page
+      pdf.setFont('helvetica', 'bold')
+      pdf.text(label, left, y)
+      pdf.setFont('helvetica', 'normal')
+    }
+
+    pdf.text(lines[i], xVal, y)
+    y += lineHeight
+  }
+
+  return y + 1
+}
 
 
 export class PDFService {
@@ -199,43 +204,45 @@ export class PDFService {
 
     // Set font
     pdf.setFontSize(opts.fontSize)
+    const generatedAt = new Date().toLocaleString()
+    const newPage: NewPageFn = () => this.addPageWithHeader(pdf, opts, generatedAt)
 
     try {
       // Header
-      yPosition = this.addHeader(pdf, opts, yPosition)
+      yPosition = this.addHeader(pdf, opts, yPosition, generatedAt)
 
       // Basic Information
-      yPosition = this.addBasicInformation(pdf, data, opts, yPosition, contentWidth)
+      yPosition = this.addBasicInformation(pdf, data, opts, yPosition, contentWidth, newPage)
 
       // Patient Information
-      yPosition = this.addPatientInformation(pdf, data, opts, yPosition, contentWidth)
+      yPosition = this.addPatientInformation(pdf, data, opts, yPosition, contentWidth, newPage)
 
       // Medical History
-      yPosition = this.addMedicalHistory(pdf, data, opts, yPosition, contentWidth)
+      yPosition = this.addMedicalHistory(pdf, data, opts, yPosition, contentWidth, newPage)
 
       // Assessment
-      yPosition = this.addAssessment(pdf, data, opts, yPosition, contentWidth)
+      yPosition = this.addAssessment(pdf, data, opts, yPosition, contentWidth, newPage)
 
       // Injury Canvas (if available and enabled)
       if (opts.includeImages && data.injuryCanvas) {
-        yPosition = await this.addInjuryCanvas(pdf, data.injuryCanvas, opts, yPosition, contentWidth, data)
+        yPosition = await this.addInjuryCanvas(pdf, data.injuryCanvas, opts, yPosition, contentWidth, data, newPage)
       }
 
       // Vital Signs
       if (data.vitalSigns?.length) {
-        yPosition = this.addVitalSigns(pdf, data.vitalSigns, opts, yPosition, contentWidth)
+        yPosition = this.addVitalSigns(pdf, data.vitalSigns, opts, yPosition, contentWidth, newPage)
       }
 
       // Oxygen Protocol
       if (data.oxygenProtocol) {
-        yPosition = this.addOxygenProtocol(pdf, data.oxygenProtocol, data.vitalSigns2, opts, yPosition, contentWidth)
+        yPosition = this.addOxygenProtocol(pdf, data.oxygenProtocol, data.vitalSigns2, opts, yPosition, contentWidth, newPage)
       }
 
       // Transport Information
-      yPosition = this.addTransportInformation(pdf, data, opts, yPosition, contentWidth)
+      yPosition = this.addTransportInformation(pdf, data, opts, yPosition, contentWidth, newPage)
 
       // Signatures and Footer
-      yPosition = this.addSignaturesAndFooter(pdf, data, opts, yPosition, contentWidth)
+      yPosition = this.addSignaturesAndFooter(pdf, data, opts, yPosition, newPage)
 
       // NEW: append sign-off PDF
       // Generate blob
@@ -454,34 +461,50 @@ export class PDFService {
     return new Blob([mergedBytes], { type: 'application/pdf' })
   }
 
-  /**
-   * Add header to PDF
-   */
-  private addHeader(pdf: jsPDF, options: Required<PDFOptions>, yPosition: number): number {
-    const pageWidth = pdf.internal.pageSize.getWidth()
+// Add header to PDF
+private addHeader(
+  pdf: jsPDF,
+  options: Required<PDFOptions>,
+  yPosition: number,
+  generatedAt: string
+): number {
+  const pageWidth = pdf.internal.pageSize.getWidth()
 
-    // Title with logo aligned together
-    const logoPath = './images/vcrt_logo.png' // relative path for Electron compatibility
-    const logoSize = 8                       // square logo
-    const x = options.margins.left
-    const y = yPosition                      // baseline for alignment
+  const logoPath = './images/vcrt_logo.png'
+  const logoSize = 8
+  const x = options.margins.left
+  const y = yPosition
 
-    // Add logo
-    pdf.addImage(logoPath, 'PNG', x, y - logoSize + 3, logoSize, logoSize)
+  pdf.addImage(logoPath, 'PNG', x, y - logoSize + 3, logoSize, logoSize)
 
-    // Add text aligned with logo vertically
-    pdf.setFontSize(12)
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('Patient Care Report', x + logoSize + 3, y)
+  pdf.setFontSize(12)
+  pdf.setFont('helvetica', 'bold')
+  pdf.text('Patient Care Report', x + logoSize + 3, y)
 
-    // Timestamp
-    pdf.setFontSize(7)
-    pdf.setFont('helvetica', 'normal')
-    const timestamp = new Date().toLocaleString()
-    pdf.text(`Generated: ${timestamp}`, pageWidth - options.margins.right, yPosition, { align: 'right' })
-    
-    return yPosition + 8
-  }
+  pdf.setFontSize(7)
+  pdf.setFont('helvetica', 'normal')
+  pdf.text(`Generated: ${generatedAt}`, pageWidth - options.margins.right, yPosition, { align: 'right' })
+
+  return yPosition + 8
+}
+
+private addPageWithHeader(
+  pdf: jsPDF,
+  options: Required<PDFOptions>,
+  generatedAt: string
+): number {
+  pdf.addPage()
+
+  // Put header at the top and return y AFTER header
+  const yAfterHeader = this.addHeader(pdf, options, options.margins.top, generatedAt)
+
+  // Restore default body text state
+  pdf.setFontSize(options.fontSize)
+  pdf.setFont('helvetica', 'normal')
+  pdf.setTextColor(0, 0, 0)
+
+  return yAfterHeader
+}
 
   /**
    * Add basic information section
@@ -491,11 +514,13 @@ export class PDFService {
     data: PCRFormData,
     options: Required<PDFOptions>,
     yPosition: number,
-    contentWidth: number
+    contentWidth: number,
+    newPage: NewPageFn
   ): number {
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
     const boxHeight = 8
+    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight + 6, newPage)
     const boxX = options.margins.left
     const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
     const boxY = yPosition
@@ -522,7 +547,8 @@ export class PDFService {
       [1, 1, 1, 1], 
       yPosition,
       options,
-      contentWidth
+      contentWidth,
+      newPage
     )
     
     // Second set of basic info
@@ -541,7 +567,8 @@ export class PDFService {
       [1, 1, 2], 
       yPosition,
       options,
-      contentWidth
+      contentWidth,
+      newPage
     )
 
     // Third set of basic info
@@ -556,7 +583,8 @@ export class PDFService {
       [1, 1, 1, 1], 
       yPosition,
       options,
-      contentWidth
+      contentWidth,
+      newPage
     )
 
     // Fourth set of basic info
@@ -569,7 +597,8 @@ export class PDFService {
       [2, 2], 
       yPosition,
       options,
-      contentWidth
+      contentWidth,
+      newPage
     )
 
     pdf.setDrawColor(0)
@@ -593,7 +622,8 @@ export class PDFService {
     data: PCRFormData,
     options: Required<PDFOptions>,
     yPosition: number,
-    contentWidth: number
+    contentWidth: number,
+    newPage: NewPageFn
   ): number {
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
@@ -611,7 +641,8 @@ export class PDFService {
       [1, 1, 1, 1], 
       yPosition,
       options,
-      contentWidth
+      contentWidth,
+      newPage
     )
 
     // Second set of patient info
@@ -625,7 +656,8 @@ export class PDFService {
       [1, 1, 2], 
       yPosition,
       options,
-      contentWidth
+      contentWidth,
+      newPage
     )
 
     // Third set of patient info
@@ -641,7 +673,8 @@ export class PDFService {
       [1, 1, 1, 1], 
       yPosition,
       options,
-      contentWidth
+      contentWidth,
+      newPage
     )
 
     return yPosition
@@ -656,11 +689,13 @@ export class PDFService {
     data: PCRFormData,
     options: Required<PDFOptions>,
     yPosition: number,
-    contentWidth: number
+    contentWidth: number,
+    newPage: NewPageFn
   ): number {
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
     const boxHeight = 8
+    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight + 6, newPage)
     const boxX = options.margins.left
     const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
     const boxY = yPosition
@@ -675,22 +710,22 @@ export class PDFService {
     pdf.setFont('helvetica', 'normal')
 
     yPosition = renderMultilineBlock(
-      pdf, `Chief Complaint:`, data.chiefComplaint || '', yPosition, options, contentWidth
+      pdf, `Chief Complaint:`, data.chiefComplaint || '', yPosition, options, contentWidth, newPage
     )
     yPosition = renderMultilineBlock(
-      pdf, `Signs & Symptoms:`, data.signsSymptoms|| '', yPosition, options, contentWidth
+      pdf, `Signs & Symptoms:`, data.signsSymptoms|| '', yPosition, options, contentWidth, newPage
     )
     yPosition = renderMultilineBlock(
-      pdf, `Allergies:`, data.allergies || '', yPosition, options, contentWidth
+      pdf, `Allergies:`, data.allergies || '', yPosition, options, contentWidth, newPage
     )
     yPosition = renderMultilineBlock(
-      pdf, `Medications:`, data.medications || '', yPosition, options, contentWidth
+      pdf, `Medications:`, data.medications || '', yPosition, options, contentWidth, newPage
     )
     yPosition = renderMultilineBlock(
-      pdf, `Pertinent Medical History:`, data.medicalHistory || '', yPosition, options, contentWidth
+      pdf, `Pertinent Medical History:`, data.medicalHistory || '', yPosition, options, contentWidth, newPage
     )
     yPosition = renderMultilineBlock(
-      pdf, `Last Meal:`, data.lastMeal || '', yPosition, options, contentWidth
+      pdf, `Last Oral Intake:`, data.lastMeal || '', yPosition, options, contentWidth, newPage
     )
     
     pdf.setDrawColor(0)
@@ -704,7 +739,7 @@ export class PDFService {
     yPosition += 6
 
     yPosition = renderMultilineBlock(
-      pdf, `Rapid Body Survey Findings:`, data.bodySurvey || '', yPosition, options, contentWidth
+      pdf, `Rapid Body Survey Findings:`, data.bodySurvey || '', yPosition, options, contentWidth, newPage
     )
 
     return yPosition
@@ -718,11 +753,13 @@ export class PDFService {
     data: PCRFormData,
     options: Required<PDFOptions>,
     yPosition: number,
-    contentWidth: number
+    contentWidth: number,
+    newPage: NewPageFn
   ): number {
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
     const boxHeight = 8
+    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight + 6, newPage)
     const boxX = options.margins.left
     const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
     const boxY = yPosition
@@ -739,7 +776,7 @@ export class PDFService {
     const airwayManagement = Array.isArray(data.airwayManagement) && data.airwayManagement.length > 0
     ? data.airwayManagement.join(', ')
     : ''
-    yPosition = renderFieldsRow( pdf, [{ label: 'Airway Management:', value: airwayManagement || ' N/A' }], [4], yPosition, options, contentWidth )
+    yPosition = renderFieldsRow( pdf, [{ label: 'Airway Management:', value: airwayManagement || ' N/A' }], [4], yPosition, options, contentWidth, newPage)
     
     yPosition = renderFieldsRow(
       pdf,
@@ -750,7 +787,8 @@ export class PDFService {
       [2, 2], 
       yPosition,
       options,
-      contentWidth
+      contentWidth, 
+      newPage
     )
 
     yPosition = renderFieldsRow(
@@ -762,7 +800,8 @@ export class PDFService {
       [2, 2], 
       yPosition,
       options,
-      contentWidth
+      contentWidth, 
+      newPage
     )
 
     const hemorrhageControl = Array.isArray(data.hemorrhageControl) && data.hemorrhageControl.length > 0
@@ -781,7 +820,8 @@ export class PDFService {
       [2, 1, 1], 
       yPosition, 
       options, 
-      contentWidth 
+      contentWidth, 
+      newPage 
     )
 
     const immobilization = Array.isArray(data.immobilization) && data.immobilization.length > 0
@@ -797,6 +837,7 @@ export class PDFService {
       yPosition, 
       options, 
       contentWidth,
+      newPage
     )
 
     return yPosition
@@ -811,7 +852,8 @@ export class PDFService {
     options: Required<PDFOptions>,
     yPosition: number,
     contentWidth: number,
-    data: PCRFormData
+    data: PCRFormData,
+    newPage: NewPageFn
   ): Promise<number> {
     try {
       pdf.setDrawColor(0)
@@ -847,6 +889,8 @@ export class PDFService {
       const leftColWidth = (contentWidth - columnGap) / 2
       const imgWidth = (contentWidth - columnGap) / 2
       const imgHeight = imgWidth * 0.4 // Maintain your chosen aspect ratio
+      const blockNeed = Math.max(imgHeight, 40) // or something based on your left text minimum
+      yPosition = ensureSpaceFor(pdf, options, yPosition, blockNeed, newPage)
       const startY = yPosition
 
       // --- Draw image on the RIGHT half ---
@@ -864,22 +908,22 @@ export class PDFService {
       let yText = startY
       yText += 6
       yText = renderMultilineBlock(
-        pdf, 'Onset:', data.onset || '', yText, options, leftColWidth
+        pdf, 'Onset:', data.onset || '', yText, options, leftColWidth, newPage
       )
       yText = renderMultilineBlock(
-        pdf, 'Provocation:', data.provocation || '', yText, options, leftColWidth
+        pdf, 'Provocation:', data.provocation || '', yText, options, leftColWidth, newPage
       )
       yText = renderMultilineBlock(
-        pdf, 'Quality:', data.quality || '', yText, options, leftColWidth
+        pdf, 'Quality:', data.quality || '', yText, options, leftColWidth, newPage
       )
       yText = renderMultilineBlock(
-        pdf, 'Radiation:', data.radiation || '', yText, options, leftColWidth
+        pdf, 'Radiation:', data.radiation || '', yText, options, leftColWidth, newPage
       )
       yText = renderFieldsRow(
-        pdf, [{ label: 'Scale:', value: data.scale || '' }], [4], yText, options, leftColWidth
+        pdf, [{ label: 'Scale:', value: data.scale || '' }], [4], yText, options, leftColWidth, newPage
       )
       yText = renderFieldsRow(
-        pdf, [{ label: 'Time:', value: data.time || '' }], [4], yText, options, leftColWidth
+        pdf, [{ label: 'Time:', value: data.time || '' }], [4], yText, options, leftColWidth, newPage
       )
 
       // Advance Y by the taller of image vs text, plus a small spacer
@@ -899,7 +943,8 @@ export class PDFService {
     vitalSigns: VitalSign[],
     options: Required<PDFOptions>,
     yPosition: number,
-    contentWidth: number
+    contentWidth: number,
+    newPage: NewPageFn
   ): number {
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
@@ -950,8 +995,7 @@ export class PDFService {
 
     const ensureRoom = (need: number) => {
       if (yPosition + need > pageH - bottom) {
-        pdf.addPage()
-        yPosition = options.margins.top
+        yPosition = newPage()
         drawSectionHeader()
         drawTableHeader()
       }
@@ -1016,10 +1060,11 @@ export class PDFService {
     vitalSigns2: VitalSigns2[],
     options: Required<PDFOptions>,
     yPosition: number,
-    contentWidth: number
+    contentWidth: number,
+    newPage: NewPageFn
   ): number {
     const boxHeight = 8
-    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight + 6)
+    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight + 6, newPage)
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
     const boxX = options.margins.left
@@ -1049,7 +1094,8 @@ export class PDFService {
         [2, 1, 1],
         yPosition,
         options,
-        contentWidth
+        contentWidth,
+        newPage
       )
     }
 
@@ -1064,7 +1110,8 @@ export class PDFService {
         [2, 2],
         yPosition,
         options,
-        contentWidth
+        contentWidth,
+        newPage
       )
 
       // Reason (string or array)
@@ -1078,7 +1125,8 @@ export class PDFService {
           [4],
           yPosition,
           options,
-          contentWidth
+          contentWidth,
+          newPage
         )
       }
 
@@ -1094,7 +1142,8 @@ export class PDFService {
           [2, 2],
           yPosition,
           options,
-          contentWidth
+          contentWidth,
+          newPage
         )
       }
 
@@ -1110,7 +1159,8 @@ export class PDFService {
           [2, 2],
           yPosition,
           options,
-          contentWidth
+          contentWidth,
+          newPage
         )
       }
 
@@ -1132,7 +1182,7 @@ export class PDFService {
 
     // need: spacing before header (4) + header line (4) + table + trailing spacer (6)
     const needed = 4 + 4 + tableHeight + 6
-    yPosition = ensureSpaceFor(pdf, options, yPosition, needed)
+    yPosition = ensureSpaceFor(pdf, options, yPosition, needed, newPage)
 
     // small sub-header
     yPosition += 4
@@ -1200,7 +1250,8 @@ export class PDFService {
             `Reason for Ending Therapy:`, oxygenProtocol.reasonForEndingTherapy || '',
             yPosition,
             options,
-            contentWidth
+            contentWidth,
+            newPage
           )
         }
       }
@@ -1303,10 +1354,11 @@ export class PDFService {
     data: PCRFormData,
     options: Required<PDFOptions>,
     yPosition: number,
-    contentWidth: number
+    contentWidth: number,
+    newPage: NewPageFn
   ): number {
     const boxHeight = 8
-    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight + 6)
+    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight + 6, newPage)
     pdf.setFontSize(9)
     pdf.setFont('helvetica', 'bold')
     const boxX = options.margins.left
@@ -1328,11 +1380,12 @@ export class PDFService {
       (data.comments || '').trim(),
       yPosition,
       options,
-      contentWidth
+      contentWidth,
+      newPage
     );
     
     const boxHeight2 = 8
-    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight2 + 6)
+    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight2 + 6, newPage)
     const boxX2 = options.margins.left
     const boxWidth2 = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
     const boxY2 = yPosition
@@ -1378,7 +1431,8 @@ export class PDFService {
       spans,
       yPosition,
       options,
-      contentWidth
+      contentWidth,
+      newPage
     )
 
     // If paramedics, render Hospital Destination on its own row under it
@@ -1389,7 +1443,8 @@ export class PDFService {
         [4],
         yPosition,
         options,
-        contentWidth
+        contentWidth,
+        newPage
       )
     }
 
@@ -1404,7 +1459,8 @@ export class PDFService {
       (data.transferComments || '').trim(),
       yPosition,
       options,
-      contentWidth
+      contentWidth,
+      newPage
     );
 
     return yPosition + 4
@@ -1419,6 +1475,7 @@ export class PDFService {
     data: PCRFormData,
     options: Required<PDFOptions>,
     yPosition: number,
+    newPage: NewPageFn
   ): number {
     const pageW = pdf.internal.pageSize.getWidth()
     const pageH = pdf.internal.pageSize.getHeight()
@@ -1434,7 +1491,7 @@ export class PDFService {
 
     // if we collide with content, push to a new page
     if (yPosition > stripTopY - 4) {
-      pdf.addPage()
+      yPosition = newPage()
     }
 
     const startY = pageH - bottom - stripHeight + 5
@@ -1455,9 +1512,9 @@ export class PDFService {
     const respondersLine = names.length ? names.join(' | ') : 'Responders: Not Recorded'
 
     const statement =
-      'This statement serves as a replacement for signatures on this Patient Care Report.'
+      'This statement serves as a replacement for responder signatures on this Patient Care Report.'
 
-    pdf.setFontSize(7)
+    pdf.setFontSize(8)
 
     // Line 1: responders
     pdf.setFont('helvetica', 'bold')
