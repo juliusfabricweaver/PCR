@@ -428,14 +428,6 @@ const PCRPage: React.FC = () => {
     showNotification('Sample data filled for testing', 'info')
   }
 
-  // Fill only the "Additional Information" textareas
-  const fillAdditionalInfoSample = () => {
-    updateField('comments', 'BLA BLA BLA')
-    updateField('transferComments', 'BLA BLA BLA')
-
-    showNotification('Filled sample text for Additional Information', 'info')
-  }
-
   // Drop-box for sign-off
   const validateAndSetSignOff = (file: File | null) => {
     setSignOffPdfError('')
@@ -1118,21 +1110,8 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         {/* Additional Information */}
-        <FormSection
-          title={
-            <span className="flex items-center gap-2">
-              <span>Additional Information</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={fillAdditionalInfoSample}
-              >
-                Fill Sample
-              </Button>
-            </span>
-          }
+        <FormSection 
+          title="Additional Information" 
           subtitle="Call details and patient transfer information"
           required
         >
