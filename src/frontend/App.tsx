@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Layout } from '@/components/layout'
 import { Loading } from '@/components/ui'
-import { LoginPage, PCRPage, ActivityLogsPage } from '@/pages'
+import { LoginPage, PCRPage, ActivityLogsPage, DashboardPage } from '@/pages'
 import { AuthProvider, NotificationProvider, FormProvider, useAuth } from '@/context'
 import { useTimeout } from '@/hooks'
-import DashboardPage from './pages/DashboardPage'
 import ReportsPage from './pages/ReportsPage'
 import UserManagementPage from './pages/UserManagementPage'
 
@@ -106,18 +105,9 @@ const AppContent: React.FC = () => {
     >
       <Routes>
         {/* Dashboard */}
-        <Route
+        <Route 
           path="/dashboard"
-          element={
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Welcome back, {user?.firstName}! Here's your PCR system overview.
-                </p>
-              </div>
-            </div>
-          }
+          element={<DashboardPage />} 
         />
 
         {/* New PCR Form */}
