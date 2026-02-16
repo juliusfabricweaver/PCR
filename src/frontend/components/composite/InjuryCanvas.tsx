@@ -24,15 +24,24 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
   const [brushColor, setBrushColor] = useState('#DC2626')
   const [brushSize, setBrushSize] = useState(3)
   const [drawingMode, setDrawingMode] = useState<'pen' | 'eraser'>('pen')
-  const [isDrawing, setIsDrawing] = useState(false)
   const [isImageLoaded, setIsImageLoaded] = useState(false)
-  const [strokes, setStrokes] = useState<Array<{
+
+  // Use refs for all drawing state to avoid stale closures
+  const isDrawingRef = useRef(false)
+  const strokesRef = useRef<Array<{
     color: string
     size: number
-    points: Array<{ x: number, y: number }>
+    points: Array<{ x: number; y: number }>
   }>>([])
-  const currentStrokeRef = useRef<Array<{ x: number, y: number }>>([])
-  const lastPointRef = useRef<{ x: number, y: number } | null>(null)
+  const currentStrokeRef = useRef<Array<{ x: number; y: number }>>([])
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null)
+  const drawStyleRef = useRef({ color: '#DC2626', size: 3 })
+
+  // Track last value we sent to parent to prevent feedback loop
+  const lastSentValueRef = useRef<string>('')
+
+  // Counter to trigger re-renders when strokes change (after drawing completes)
+  const [strokeVersion, setStrokeVersion] = useState(0)
 
   const colors = [
     { name: 'Red', value: '#DC2626', description: 'Injury/wound' },
@@ -46,6 +55,7 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
     if (!canvasRef.current || !contextRef.current) return
 
     const ctx = contextRef.current
+    const currentStrokes = strokesRef.current
 
     // Clear canvas
     ctx.clearRect(0, 0, width, height)
@@ -64,13 +74,21 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
     }
 
     // Draw all strokes
-    strokes.forEach(stroke => {
-      if (stroke.points.length < 2) return
+    currentStrokes.forEach(stroke => {
+      if (stroke.points.length === 0) return
 
       ctx.strokeStyle = stroke.color
       ctx.lineWidth = stroke.size
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
+
+      if (stroke.points.length === 1) {
+        ctx.beginPath()
+        ctx.arc(stroke.points[0].x, stroke.points[0].y, stroke.size / 2, 0, Math.PI * 2)
+        ctx.fillStyle = stroke.color
+        ctx.fill()
+        return
+      }
 
       ctx.beginPath()
       ctx.moveTo(stroke.points[0].x, stroke.points[0].y)
@@ -81,7 +99,7 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
 
       ctx.stroke()
     })
-  }, [strokes, width, height])
+  }, [width, height])
 
   const saveCanvasData = useCallback(() => {
     if (!canvasRef.current) return
@@ -89,12 +107,14 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
     const imageDataUrl = canvasRef.current.toDataURL('image/png', 1.0)
 
     const canvasData = {
-      strokes,
-      imageData: imageDataUrl
+      strokes: strokesRef.current,
+      imageData: imageDataUrl,
     }
 
-    onChange(JSON.stringify(canvasData))
-  }, [strokes, onChange])
+    const serialized = JSON.stringify(canvasData)
+    lastSentValueRef.current = serialized
+    onChange(serialized)
+  }, [onChange])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -123,107 +143,136 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
     }
     // Use relative path for Electron compatibility
     img.src = './images/front_image.jpg'
-
   }, [width, height])
 
-  // Load canvas data when value changes
+  // Load canvas data from parent — but skip echoes of our own onChange
   useEffect(() => {
-    if (isImageLoaded && value && value.trim()) {
-      try {
-        const parsedValue = JSON.parse(value)
+    if (!isImageLoaded || !value || !value.trim()) return
+    // Skip if this is just the parent echoing back what we sent
+    if (value === lastSentValueRef.current) return
+    // Don't overwrite strokes while user is actively drawing
+    if (isDrawingRef.current) return
 
-        // Handle both new format and backward compatibility
-        if (parsedValue.strokes && Array.isArray(parsedValue.strokes)) {
-          setStrokes(parsedValue.strokes)
-        } else if (parsedValue.fabricData && parsedValue.fabricData.objects) {
-          // Convert old Fabric.js format to new format (basic conversion)
-          setStrokes([])
-        }
-      } catch (error) {
-        console.error('Failed to load canvas data:', error)
-        setStrokes([])
+    try {
+      const parsedValue = JSON.parse(value)
+
+      if (parsedValue.strokes && Array.isArray(parsedValue.strokes)) {
+        strokesRef.current = parsedValue.strokes
+        setStrokeVersion(v => v + 1)
+      } else if (parsedValue.fabricData && parsedValue.fabricData.objects) {
+        // Convert old Fabric.js format to new format (basic conversion)
+        strokesRef.current = []
+        setStrokeVersion(v => v + 1)
       }
+    } catch (error) {
+      console.error('Failed to load canvas data:', error)
+      strokesRef.current = []
+      setStrokeVersion(v => v + 1)
     }
   }, [value, isImageLoaded])
 
-  // Only redraw when loading new data, not during active drawing
+  // Redraw when stroke data changes (not during active drawing)
   useEffect(() => {
-    if (!isDrawing) {
+    if (!isDrawingRef.current) {
       redrawCanvas()
     }
-  }, [strokes, isDrawing])
+  }, [strokeVersion, redrawCanvas])
 
-  // Save canvas data when strokes change (but not during active drawing)
+  // Save canvas data when strokes change
   useEffect(() => {
-    if (strokes.length > 0 && !isDrawing) {
+    if (strokesRef.current.length > 0 && !isDrawingRef.current) {
       saveCanvasData()
     }
-  }, [strokes, isDrawing])
+  }, [strokeVersion, saveCanvasData])
 
   const getMousePos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
 
     const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
     }
   }, [])
 
-  const startDrawing = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!contextRef.current) return
+  const startDrawing = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!contextRef.current) return
 
-    const pos = getMousePos(e)
-    lastPointRef.current = pos
-    currentStrokeRef.current = [pos]
-    setIsDrawing(true)
+      const pos = getMousePos(e)
+      lastPointRef.current = pos
+      currentStrokeRef.current = [pos]
+      isDrawingRef.current = true
 
-    // Set up drawing context
-    const ctx = contextRef.current
-    const currentColor = drawingMode === 'eraser' ? '#f9fafb' : brushColor
-    const currentSize = drawingMode === 'eraser' ? brushSize * 2 : brushSize
-
-    ctx.strokeStyle = currentColor
-    ctx.lineWidth = currentSize
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.beginPath()
-    ctx.moveTo(pos.x, pos.y)
-  }, [getMousePos, brushColor, brushSize, drawingMode])
-
-  const draw = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !lastPointRef.current || !contextRef.current) return
-
-    const pos = getMousePos(e)
-    const ctx = contextRef.current
-
-    // Draw line to current position
-    ctx.lineTo(pos.x, pos.y)
-    ctx.stroke()
-
-    // Add point to current stroke
-    currentStrokeRef.current.push(pos)
-    lastPointRef.current = pos
-  }, [isDrawing, getMousePos])
-
-  const stopDrawing = useCallback(() => {
-    if (isDrawing && currentStrokeRef.current.length > 1) {
+      // Compute and store drawing style
       const currentColor = drawingMode === 'eraser' ? '#f9fafb' : brushColor
       const currentSize = drawingMode === 'eraser' ? brushSize * 2 : brushSize
+      drawStyleRef.current = { color: currentColor, size: currentSize }
+
+      // Set up drawing context
+      const ctx = contextRef.current
+      ctx.strokeStyle = currentColor
+      ctx.lineWidth = currentSize
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+    },
+    [getMousePos, brushColor, brushSize, drawingMode],
+  )
+
+  const draw = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!isDrawingRef.current || !lastPointRef.current || !contextRef.current) return
+
+      const pos = getMousePos(e)
+      const ctx = contextRef.current
+      const style = drawStyleRef.current
+
+      // Re-apply style in case canvas state was corrupted by a redraw
+      ctx.strokeStyle = style.color
+      ctx.lineWidth = style.size
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+
+      // Draw line segment from last point to current position
+      ctx.beginPath()
+      ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y)
+      ctx.lineTo(pos.x, pos.y)
+      ctx.stroke()
+
+      // Add point to current stroke
+      currentStrokeRef.current.push(pos)
+      lastPointRef.current = pos
+    },
+    [getMousePos],
+  )
+
+  const stopDrawing = useCallback(() => {
+    if (!isDrawingRef.current) return
+
+    if (currentStrokeRef.current.length > 0) {
+      const style = drawStyleRef.current
 
       // Save the completed stroke
-      setStrokes(prev => [...prev, {
-        color: currentColor,
-        size: currentSize,
-        points: [...currentStrokeRef.current]
-      }])
+      strokesRef.current = [
+        ...strokesRef.current,
+        {
+          color: style.color,
+          size: style.size,
+          points: [...currentStrokeRef.current],
+        },
+      ]
     }
 
-    setIsDrawing(false)
+    isDrawingRef.current = false
     lastPointRef.current = null
     currentStrokeRef.current = []
-  }, [isDrawing, brushColor, brushSize, drawingMode])
+
+    // Trigger re-render → redraw + save
+    setStrokeVersion(v => v + 1)
+  }, [])
 
   const handleColorChange = (color: string) => {
     setBrushColor(color)
@@ -231,7 +280,9 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
   }
 
   const handleClearCanvas = () => {
-    setStrokes([])
+    strokesRef.current = []
+    lastSentValueRef.current = ''
+    setStrokeVersion(v => v + 1)
     onChange('')
   }
 
@@ -250,42 +301,44 @@ const InjuryCanvas: React.FC<InjuryCanvasProps> = ({
         <div className="flex items-center space-x-4">
           {/* Colors */}
           <div className="flex space-x-2">
-            {colors.map((color) => (
+            {colors.map(color => (
               <Tooltip key={color.value} content={`${color.name} - ${color.description}`}>
                 <button
-                  type="button"                                   // <-- add this
-                  onClick={(e) => { e.preventDefault(); handleColorChange(color.value); }} // optional safety
+                  type="button"
+                  onClick={e => {
+                    e.preventDefault()
+                    handleColorChange(color.value)
+                  }}
                   aria-label={`Select ${color.name} (${color.description})`}
                   className={cn(
                     'w-8 h-8 rounded-full border-2 transition-all',
                     brushColor === color.value
                       ? 'border-gray-900 dark:border-gray-100 scale-110'
-                      : 'border-gray-300 dark:border-gray-600 hover:scale-105'
+                      : 'border-gray-300 dark:border-gray-600 hover:scale-105',
                   )}
                   style={{ backgroundColor: color.value }}
                 />
-
               </Tooltip>
             ))}
           </div>
 
           {/* Brush Size */}
           <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">Size:</span>
+            <span className="text-sm font-medium dark:text-white">Size:</span>
             <input
               type="range"
               min="1"
               max="20"
               value={brushSize}
-              onChange={(e) => setBrushSize(Number(e.target.value))}
+              onChange={e => setBrushSize(Number(e.target.value))}
               className="w-16"
             />
-            <span className="text-sm w-6">{brushSize}</span>
+            <span className="text-sm w-6 dark:text-white">{brushSize}</span>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex space-x-2">  
+        <div className="flex space-x-2">
           <Button
             type="button"
             variant="outline"
