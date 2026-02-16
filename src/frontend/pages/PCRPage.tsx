@@ -489,7 +489,7 @@ const PCRPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {currentReportId && loadedStatus === 'submitted' && isAdmin
+            {currentReportId && (loadedStatus === 'submitted' || loadedStatus === 'approved') && isAdmin
               ? 'Edit Submitted Patient Care Report (Admin)'
               : currentDraftId
                 ? 'Edit Patient Care Report Draft'
@@ -498,7 +498,7 @@ const PCRPage: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400">
             {isLoadingDraft
               ? 'Loading...'
-              : currentReportId && loadedStatus === 'submitted' && isAdmin
+              : currentReportId && (loadedStatus === 'submitted' || loadedStatus === 'approved') && isAdmin
                 ? 'Editing submitted report as admin - changes will update the existing report'
                 : currentDraftId
                   ? 'Editing existing draft - complete and submit when ready'

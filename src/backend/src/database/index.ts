@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS pcr_reports (
     form_data TEXT NOT NULL,
     sign_off_attachment TEXT,
     sign_off_filename TEXT,
-    status TEXT CHECK (status IN ('draft', 'completed', 'submitted')) DEFAULT 'draft',
+    status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved')) DEFAULT 'draft',
     created_by TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -283,6 +283,36 @@ export class DatabaseManager {
       if (!columnNames.includes('sign_off_filename')) {
         this.database.exec('ALTER TABLE pcr_reports ADD COLUMN sign_off_filename TEXT');
         console.log('Migration: Added sign_off_filename column to pcr_reports');
+      }
+
+      // Migration: Add 'approved' to status CHECK constraint
+      // Check if the constraint already includes 'approved' by trying an insert with that status
+      try {
+        this.database.exec(`
+          CREATE TABLE IF NOT EXISTS pcr_reports_new (
+            id TEXT PRIMARY KEY,
+            form_data TEXT NOT NULL,
+            sign_off_attachment TEXT,
+            sign_off_filename TEXT,
+            status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved')) DEFAULT 'draft',
+            created_by TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES users(id)
+          )
+        `);
+        this.database.exec(`
+          INSERT INTO pcr_reports_new SELECT id, form_data, sign_off_attachment, sign_off_filename, status, created_by, created_at, updated_at FROM pcr_reports
+        `);
+        this.database.exec('DROP TABLE pcr_reports');
+        this.database.exec('ALTER TABLE pcr_reports_new RENAME TO pcr_reports');
+        // Recreate indexes
+        this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_by ON pcr_reports(created_by)');
+        this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_status ON pcr_reports(status)');
+        this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_at ON pcr_reports(created_at)');
+        console.log('Migration: Updated pcr_reports status constraint to include approved');
+      } catch (migrationError) {
+        console.error('Migration error (status constraint):', migrationError);
       }
     } catch (error) {
       console.error('Migration error:', error);

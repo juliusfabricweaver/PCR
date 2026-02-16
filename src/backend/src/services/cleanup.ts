@@ -55,7 +55,7 @@ export class CleanupService {
   private cleanupPCRReports(): { changes: number } {
     const deleteQuery = `
       DELETE FROM pcr_reports
-      WHERE status IN ('submitted','draft')
+      WHERE status IN ('submitted','draft','approved')
       AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
     `
     return db.prepare(deleteQuery).run()
@@ -102,7 +102,7 @@ export class CleanupService {
       // Delete PCR reports older than configured retention
       const pcrDeleteQuery = `
         DELETE FROM pcr_reports
-        WHERE status = 'submitted'
+        WHERE status IN ('submitted','approved')
         AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
       `
       const pcrResult = db.prepare(pcrDeleteQuery).run()
@@ -142,7 +142,7 @@ export class CleanupService {
       const pcrQuery = `
         SELECT COUNT(*) as count, MIN(created_at) as oldestDate
         FROM pcr_reports
-        WHERE status = 'submitted'
+        WHERE status IN ('submitted','approved')
         AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
       `
       const pcrResult = db.prepare(pcrQuery).get() as { count: number, oldestDate: string | null }

@@ -95,6 +95,25 @@ const ReportsPage = () => {
     window.location.hash = `/pcr/new?${params.toString()}`
   }
 
+  const handleApproveReport = async (reportId: string) => {
+    try {
+      if (!token) {
+        setError('Authentication required')
+        return
+      }
+
+      await apiRequest(`/pcr/${reportId}/approve`, { method: 'PUT' })
+
+      // Optimistic UI: update status in local state
+      setReports(prev =>
+        prev.map(r => (r.id === reportId ? { ...r, status: 'approved' } : r))
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to approve report')
+      console.error('Error approving report:', err)
+    }
+  }
+
   const handleDeleteReport = async (reportId: string, status: string) => {
     const what = status === 'draft' ? 'this draft' : 'this submission'
     const ok = window.confirm(`Delete ${what}? This cannot be undone.`)
@@ -221,9 +240,9 @@ const ReportsPage = () => {
                   {reports.map(report => (
                     <tr
                       key={report.id}
-                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${report.status === 'submitted' ? 'cursor-pointer' : ''}`}
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${report.status === 'submitted' || report.status === 'approved' ? 'cursor-pointer' : ''}`}
                       onClick={
-                        report.status === 'submitted'
+                        report.status === 'submitted' || report.status === 'approved'
                           ? () => handleViewReport(report.id)
                           : undefined
                       }
@@ -235,11 +254,13 @@ const ReportsPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            report.status === 'submitted'
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                              : report.status === 'draft'
-                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
-                                : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+                            report.status === 'approved'
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+                              : report.status === 'submitted'
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                                : report.status === 'draft'
+                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
                           }`}
                         >
                           {report.status}
@@ -285,6 +306,17 @@ const ReportsPage = () => {
                               >
                                 View PDF
                               </button>
+                              {isAdmin && report.status === 'submitted' && (
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation()
+                                    handleApproveReport(report.id)
+                                  }}
+                                  className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
+                                >
+                                  Approve
+                                </button>
+                              )}
                               {isAdmin && (
                                 <button
                                   onClick={e => {

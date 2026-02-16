@@ -156,6 +156,7 @@ const ActivityLogsPage = () => {
       update_pcr: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
       submit_pcr: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200',
       delete_pcr: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+      approve_pcr: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
       cleanup_pcr_reports: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-200',
     }
     return colors[action] || 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
@@ -262,6 +263,7 @@ const ActivityLogsPage = () => {
                 { value: 'update_pcr', label: 'Update PCR' },
                 { value: 'submit_pcr', label: 'Submit PCR' },
                 { value: 'delete_pcr', label: 'Delete PCR' },
+                { value: 'approve_pcr', label: 'Approve PCR' },
               ]}
             />
 

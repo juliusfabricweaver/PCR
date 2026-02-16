@@ -160,8 +160,8 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Regular users can only edit drafts (submitted reports locked for non-admins)
-    if (!isAdmin && existingReport.status === 'submitted') {
+    // Regular users can only edit drafts (submitted/approved reports locked for non-admins)
+    if (!isAdmin && (existingReport.status === 'submitted' || existingReport.status === 'approved')) {
       return res.status(403).json({ success: false, message: 'Submitted reports cannot be edited' });
     }
 
@@ -212,6 +212,46 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
 
   } catch (error) {
     console.error('Update PCR report error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// PUT /api/pcr/:id/approve - Approve a submitted PCR report (admin only)
+router.put('/:id/approve', authenticateToken, logActivity('approve_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Admin only
+    if (req.user!.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    const report = db.prepare('SELECT id, status FROM pcr_reports WHERE id = ?').get(id) as any;
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'PCR report not found' });
+    }
+
+    if (report.status !== 'submitted') {
+      return res.status(400).json({ success: false, message: 'Only submitted reports can be approved' });
+    }
+
+    db.prepare(`
+      UPDATE pcr_reports SET status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(id);
+
+    const updatedReport = db.prepare('SELECT * FROM pcr_reports WHERE id = ?').get(id) as any;
+
+    res.json({
+      success: true,
+      data: {
+        ...updatedReport,
+        form_data: JSON.parse(updatedReport.form_data)
+      }
+    });
+
+  } catch (error) {
+    console.error('Approve PCR report error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
