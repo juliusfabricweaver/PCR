@@ -48,8 +48,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       id: 'pcr-list',
       label: 'PCR Reports',
       icon: <FileText className="w-5 h-5" />,
-      href: '/pcr',
-      isActive: currentPath.startsWith('/pcr') && currentPath !== '/pcr/new',
+      href: '/reports',
+      isActive: currentPath === '/reports',
     },
   ]
 

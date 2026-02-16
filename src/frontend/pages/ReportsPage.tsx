@@ -72,7 +72,11 @@ const ReportsPage = () => {
       }
 
       // Show PDF preview using the existing PDF service (only admins can download)
-      await pdfService.showDownloadPreview(reportData.form_data, { appendPdf }, { allowDownload: isAdmin })
+      await pdfService.showDownloadPreview(
+        reportData.form_data,
+        { appendPdf },
+        { allowDownload: isAdmin },
+      )
     } catch (err) {
       setError('Failed to load report details')
       console.error('Error loading report:', err)
@@ -134,8 +138,8 @@ const ReportsPage = () => {
   }
 
   const displayReportId = (report: PCRReport) => {
-    const rn = (report.report_number ?? '').trim()
-    return rn ? rn : formatFallbackId(report.created_at)
+    const rn = (report.report_number ?? 'No Report ID').trim()
+    return rn
   }
 
   if (loading) {
@@ -161,9 +165,7 @@ const ReportsPage = () => {
         </p>
       </div>
 
-      {error && (
-        <Alert type="error" message={error} onClose={() => setError('')} />
-      )}
+      {error && <Alert type="error" message={error} onClose={() => setError('')} />}
 
       <div className="card">
         <div className="card-body">
@@ -185,7 +187,9 @@ const ReportsPage = () => {
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No PCR reports</h3>
+                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                  No PCR reports
+                </h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   Create or submit a PCR form to see reports and drafts here.
                 </p>
@@ -214,11 +218,15 @@ const ReportsPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {reports.map((report) => (
+                  {reports.map(report => (
                     <tr
                       key={report.id}
                       className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${report.status === 'submitted' ? 'cursor-pointer' : ''}`}
-                      onClick={report.status === 'submitted' ? () => handleViewReport(report.id) : undefined}
+                      onClick={
+                        report.status === 'submitted'
+                          ? () => handleViewReport(report.id)
+                          : undefined
+                      }
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                         {displayReportId(report)}
@@ -230,8 +238,8 @@ const ReportsPage = () => {
                             report.status === 'submitted'
                               ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
                               : report.status === 'draft'
-                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
                           }`}
                         >
                           {report.status}
@@ -248,13 +256,19 @@ const ReportsPage = () => {
                           {report.status === 'draft' ? (
                             <>
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleEditDraft(report.id) }}
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  handleEditDraft(report.id)
+                                }}
                                 className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
                               >
                                 Edit Draft
                               </button>
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleViewReport(report.id) }}
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  handleViewReport(report.id)
+                                }}
                                 className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 font-medium"
                               >
                                 Preview
@@ -263,14 +277,20 @@ const ReportsPage = () => {
                           ) : (
                             <>
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleViewReport(report.id) }}
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  handleViewReport(report.id)
+                                }}
                                 className="text-blue-600 hover:text-blue-900 font-medium"
                               >
                                 View PDF
                               </button>
                               {isAdmin && (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleEditReport(report.id) }}
+                                  onClick={e => {
+                                    e.stopPropagation()
+                                    handleEditReport(report.id)
+                                  }}
                                   className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
                                 >
                                   Edit
@@ -281,9 +301,11 @@ const ReportsPage = () => {
 
                           {/* Delete (works for both draft and submitted) */}
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id, report.status) }}
+                            onClick={e => {
+                              e.stopPropagation()
+                              handleDeleteReport(report.id, report.status)
+                            }}
                             className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
-
                           >
                             Delete
                           </button>
@@ -302,3 +324,4 @@ const ReportsPage = () => {
 }
 
 export default ReportsPage
+
