@@ -74,14 +74,17 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
       `;
     const params: any[] = [];
 
-    // Admins see all reports, regular users see only their own
-    if (!isAdmin) {
-      query += ' WHERE created_by = ?';
+    // Admins see all submitted/approved + their own drafts; regular users see only their own
+    if (isAdmin) {
+      query += ` WHERE (pcr_reports.status IN ('submitted', 'approved') OR pcr_reports.created_by = ?)`;
+      params.push(req.user!.id);
+    } else {
+      query += ' WHERE pcr_reports.created_by = ?';
       params.push(req.user!.id);
     }
 
     if (status) {
-      query += isAdmin ? ' WHERE status = ?' : ' AND status = ?';
+      query += ' AND pcr_reports.status = ?';
       params.push(status);
     }
 
