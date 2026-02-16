@@ -251,7 +251,7 @@ const UserManagementPage = () => {
     return role === 'admin' ? (
       <Shield className="w-4 h-4 text-blue-600" />
     ) : (
-      <UserIcon className="w-4 h-4 text-gray-600" />
+      <UserIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
     )
   }
 
@@ -260,8 +260,8 @@ const UserManagementPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center py-16">
           <Shield className="mx-auto h-12 w-12 text-gray-400" />
-          <h2 className="mt-4 text-lg font-medium text-gray-900">Access Denied</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">Access Denied</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             You need admin privileges to access user management.
           </p>
         </div>
@@ -273,8 +273,8 @@ const UserManagementPage = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">User Management</h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             Manage system users and their permissions
           </p>
         </div>
@@ -288,8 +288,8 @@ const UserManagementPage = () => {
       <div className="mb-8">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-            <p className="mt-1 text-sm text-gray-600">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">User Management</h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               Manage system users and their permissions
             </p>
           </div>
@@ -310,10 +310,10 @@ const UserManagementPage = () => {
         <div className="card-body">
           {users.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-gray-500">
+              <div className="text-gray-500 dark:text-gray-400">
                 <UserCog className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No users found</h3>
-                <p className="mt-1 text-sm text-gray-500">
+                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No users found</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   Get started by creating your first user.
                 </p>
               </div>
@@ -321,52 +321,52 @@ const UserManagementPage = () => {
           ) : (
             <>
               {users.length > 0 && (
-                <div className="mb-4 text-sm text-gray-500 flex items-center">
+                <div className="mb-4 text-sm text-gray-500 dark:text-gray-400 flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Scroll horizontally to view all columns
                 </div>
               )}
-              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
+              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[200px]">
                       User
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[120px]">
                       Role
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[100px]">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[160px]">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[160px]">
                       Created
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[160px]">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[160px]">
                       Last Login
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[180px]">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[180px]">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
+                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                              <UserIcon className="h-5 w-5 text-gray-600" />
+                            <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                              <UserIcon className="h-5 w-5 text-gray-600 dark:text-gray-200" />
                             </div>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {user.firstName} {user.lastName}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
                               @{user.username}
                             </div>
                           </div>
@@ -377,8 +377,8 @@ const UserManagementPage = () => {
                           {getRoleIcon(user.role)}
                           <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             user.role === 'admin'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
                           }`}>
                             {user.role}
                           </span>
@@ -388,17 +388,17 @@ const UserManagementPage = () => {
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             user.isActive
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
                           }`}
                         >
                           {user.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         {formatDate(user.createdAt)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         {user.lastLogin ? formatDate(user.lastLogin) : 'Never'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -565,7 +565,7 @@ const UserManagementPage = () => {
               />
             ) : (
               // Optional read-only hint for admins:
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
                 Status: <span className="font-medium">Active</span> (admins cannot be deactivated)
               </div>
             )}

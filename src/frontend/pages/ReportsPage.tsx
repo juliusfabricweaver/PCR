@@ -142,8 +142,8 @@ const ReportsPage = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">PCR Reports</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">PCR Reports</h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             View completed PCR submissions
           </p>
         </div>
@@ -155,8 +155,8 @@ const ReportsPage = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">PCR Reports</h1>
-        <p className="mt-1 text-sm text-gray-600">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">PCR Reports</h1>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
           View PCR submissions and drafts
         </p>
       </div>
@@ -169,7 +169,7 @@ const ReportsPage = () => {
         <div className="card-body">
           {reports.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-gray-500">
+              <div className="text-gray-500 dark:text-gray-400">
                 <svg
                   className="mx-auto h-12 w-12 text-gray-400"
                   fill="none"
@@ -185,42 +185,42 @@ const ReportsPage = () => {
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No PCR reports</h3>
-                <p className="mt-1 text-sm text-gray-500">
+                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No PCR reports</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   Create or submit a PCR form to see reports and drafts here.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
+            <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Report ID
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Created
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Last Updated
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {reports.map((report) => (
                     <tr
                       key={report.id}
-                      className={`hover:bg-gray-50 ${report.status === 'submitted' ? 'cursor-pointer' : ''}`}
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${report.status === 'submitted' ? 'cursor-pointer' : ''}`}
                       onClick={report.status === 'submitted' ? () => handleViewReport(report.id) : undefined}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                         {displayReportId(report)}
                       </td>
 
@@ -228,19 +228,19 @@ const ReportsPage = () => {
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             report.status === 'submitted'
-                              ? 'bg-green-100 text-green-800'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
                               : report.status === 'draft'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
                           }`}
                         >
                           {report.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         {formatDate(report.created_at)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         {formatDate(report.updated_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -249,13 +249,13 @@ const ReportsPage = () => {
                             <>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleEditDraft(report.id) }}
-                                className="text-blue-600 hover:text-blue-900 font-medium"
+                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
                               >
                                 Edit Draft
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleViewReport(report.id) }}
-                                className="text-green-600 hover:text-green-900 font-medium"
+                                className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 font-medium"
                               >
                                 Preview
                               </button>
@@ -271,7 +271,7 @@ const ReportsPage = () => {
                               {isAdmin && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleEditReport(report.id) }}
-                                  className="text-amber-600 hover:text-amber-900 font-medium"
+                                  className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
                                 >
                                   Edit
                                 </button>
@@ -282,7 +282,7 @@ const ReportsPage = () => {
                           {/* Delete (works for both draft and submitted) */}
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id, report.status) }}
-                            className="text-red-600 hover:text-red-800 font-medium"
+                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
 
                           >
                             Delete

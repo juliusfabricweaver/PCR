@@ -213,6 +213,23 @@ export const FormProvider: React.FC<FormProviderProps> = ({ children }) => {
     return true
   }, [state.data])
 
+  const validateAll = useCallback((): Record<string, string> => {
+    dispatch({ type: 'VALIDATE_ALL' })
+
+    // Compute errors here too so we can return them synchronously
+    const allErrors: Record<string, string> = {}
+    Object.entries(validationSchema).forEach(([field, rules]) => {
+      const value = field === 'ageOrDob' ? state.data : state.data[field as keyof PCRFormData]
+      for (const [rule, message] of rules) {
+        if (!rule(value)) {
+          allErrors[field] = message
+          break
+        }
+      }
+    })
+    return allErrors
+  }, [state.data])
+
   const reset = useCallback(() => {
     dispatch({ type: 'RESET' })
   }, [])
@@ -230,6 +247,7 @@ export const FormProvider: React.FC<FormProviderProps> = ({ children }) => {
     isValid: state.isValid,
     reset,
     validateField,
+    validateAll,
     loadData,
   }
 

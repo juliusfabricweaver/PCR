@@ -157,18 +157,18 @@ const ActivityLogsPage = () => {
 
   const getActionBadgeColor = (action: string) => {
     const colors: Record<string, string> = {
-      login: 'bg-green-100 text-green-800',
-      logout: 'bg-slate-100 text-slate-800',
-      create_user: 'bg-blue-100 text-blue-800',
-      update_user: 'bg-amber-100 text-amber-800',
-      delete_user: 'bg-rose-100 text-rose-800',
-      create_pcr: 'bg-indigo-100 text-indigo-800',
-      update_pcr: 'bg-yellow-100 text-yellow-800',
-      submit_pcr: 'bg-teal-100 text-teal-800',
-      delete_pcr: 'bg-red-100 text-red-800',
-      cleanup_pcr_reports: 'bg-fuchsia-100 text-fuchsia-800',
+      login: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+      logout: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-200',
+      create_user: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+      update_user: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
+      delete_user: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200',
+      create_pcr: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200',
+      update_pcr: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
+      submit_pcr: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200',
+      delete_pcr: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+      cleanup_pcr_reports: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-200',
     }
-    return colors[action] || 'bg-gray-100 text-gray-800'
+    return colors[action] || 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
   }
 
   const formatUserName = (log: ActivityLog) => {
@@ -195,8 +195,8 @@ const ActivityLogsPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center py-16">
           <History className="mx-auto h-12 w-12 text-gray-400" />
-          <h2 className="mt-4 text-lg font-medium text-gray-900">Access Denied</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">Access Denied</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             You need admin privileges to access activity logs.
           </p>
         </div>
@@ -208,8 +208,8 @@ const ActivityLogsPage = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Activity Logs</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Activity Logs</h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             Monitor system activity and user actions
           </p>
         </div>
@@ -223,12 +223,12 @@ const ActivityLogsPage = () => {
       <div className="mb-8">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Activity Logs</h1>
-            <p className="mt-1 text-sm text-gray-600">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Activity Logs</h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               Monitor system activity and user actions across the platform
             </p>
             {totalCount > 0 && (
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 Showing {logs.length} of {totalCount} activities
               </p>
             )}
@@ -252,8 +252,8 @@ const ActivityLogsPage = () => {
       <div className="card mb-6">
         <div className="card-body">
           <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Filters</span>
+            <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Filters</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -315,8 +315,8 @@ const ActivityLogsPage = () => {
           {logs.length === 0 ? (
             <div className="text-center py-8">
               <Activity className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No activity logs found</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No activity logs found</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {Object.values(filters).some(v => v) ?
                   'Try adjusting your filters to see more results.' :
                   'System activity will appear here as users interact with the platform.'
@@ -325,40 +325,40 @@ const ActivityLogsPage = () => {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                <table className="min-w-full divide-y divide-gray-300">
-                  <thead className="bg-gray-50">
+              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[180px]">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[180px]">
                         Timestamp
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[200px]">
                         User
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[140px]">
                         Action
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {logs.map((log) => (
-                      <tr key={log.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                           {formatDate(log.created_at)}
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="flex-shrink-0 h-8 w-8">
-                              <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
-                                <User className="h-4 w-4 text-gray-600" />
+                              <div className="h-8 w-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                                <User className="h-4 w-4 text-gray-600 dark:text-gray-200" />
                               </div>
                             </div>
                             <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">
+                              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                 {formatUserName(log)}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
                                 {log.username ? `@${log.username}` : `ID: ${log.user_id}`}
                               </div>
                             </div>
@@ -378,7 +378,7 @@ const ActivityLogsPage = () => {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+                <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 sm:px-6 mt-4">
                   <div className="flex flex-1 justify-between sm:hidden">
                     <Button
                       onClick={() => handlePageChange(filters.page - 1)}
@@ -397,7 +397,7 @@ const ActivityLogsPage = () => {
                   </div>
                   <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
                         Showing page <span className="font-medium">{filters.page}</span> of{' '}
                         <span className="font-medium">{totalPages}</span>
                       </p>

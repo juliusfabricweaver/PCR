@@ -22,7 +22,7 @@ import { apiRequest } from '../utils/api'
 import type { PCRFormData, VitalSign, VitalSigns2 } from '../types'
 
 const PCRPage: React.FC = () => {
-  const { data, updateField, errors, isDirty, isValid, reset, validateField, loadData } = useForm()
+  const { data, updateField, errors, isDirty, isValid, reset, validateField, validateAll, loadData } = useForm()
   const { showNotification } = useNotification()
   const { token, isAuthenticated, user: currentUser } = useAuth()
   const isAdmin = currentUser?.role === 'admin'
@@ -137,6 +137,29 @@ const PCRPage: React.FC = () => {
     setIsSubmitting(true)
 
     try {
+      // Validate all form fields
+      const formErrors = validateAll()
+      if (Object.keys(formErrors).length > 0) {
+        const errorMessages = Object.values(formErrors).slice(0, 5)
+        const remaining = Object.keys(formErrors).length - 5
+        const message = remaining > 0
+          ? `${errorMessages.join(', ')} and ${remaining} more`
+          : errorMessages.join(', ')
+        showNotification(`Please complete required fields: ${message}`, 'error')
+
+        // Scroll to the first invalid field after React re-renders the errors
+        requestAnimationFrame(() => {
+          const firstInvalid = document.querySelector('[aria-invalid="true"]')
+          if (firstInvalid) {
+            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            if (firstInvalid instanceof HTMLElement) firstInvalid.focus()
+          }
+        })
+
+        setIsSubmitting(false)
+        return
+      }
+
       // Validate form data for PDF generation
       const validation = pdfService.validateDataForPDF(data)
       if (!validation.isValid) {
@@ -1288,30 +1311,14 @@ const PCRPage: React.FC = () => {
               {isSavingDraft ? 'Saving...' : 'Save Draft'}
             </Button>
 
-            <div className="relative">
-              <Button
-                type="submit"
-                loading={isSubmitting}
-                disabled={isSubmitting}
-                leftIcon={<Send className="w-4 h-4" />}
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit PCR'}
-              </Button>
-              
-              {!isValid && Object.keys(errors).length > 0 && (
-                <div className="absolute bottom-full mb-2 right-0 w-64 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded text-sm text-red-700 dark:text-red-300">
-                  <p className="font-medium mb-1">Required fields missing:</p>
-                  <ul className="text-xs space-y-1">
-                    {Object.entries(errors).slice(0, 5).map(([field, error]) => (
-                      <li key={field}>• {error}</li>
-                    ))}
-                    {Object.keys(errors).length > 5 && (
-                      <li>• ... and {Object.keys(errors).length - 5} more</li>
-                    )}
-                  </ul>
-                </div>
-              )}
-            </div>
+            <Button
+              type="submit"
+              loading={isSubmitting}
+              disabled={isSubmitting}
+              leftIcon={<Send className="w-4 h-4" />}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit PCR'}
+            </Button>
           </div>
         </div>
       </form>
