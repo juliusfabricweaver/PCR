@@ -1,6 +1,6 @@
 # PCR Application - Patient Care Report System
 
-A comprehensive desktop application for documenting patient care reports, built with Electron, React, TypeScript, and SQLite. Designed specifically for the Volunteer Crisis Response Team (VCRT) at the University of Ottawa.
+A comprehensive desktop application for documenting patient care reports, built with Electron, React, TypeScript, and sql.js. Designed specifically for the Volunteer Crisis Response Team (VCRT) at the University of Ottawa.
 
 ## 🏗️ Architecture Overview
 
@@ -16,7 +16,7 @@ A comprehensive desktop application for documenting patient care reports, built 
 
 **Backend:**
 - Express.js with TypeScript
-- SQLite (better-sqlite3) for data storage
+- sql.js (SQLite compiled to WebAssembly) for data storage
 - JWT authentication
 - Automatic cleanup service for old records
 
@@ -47,7 +47,7 @@ PCR/
 │   │       ├── routes/       # API route handlers
 │   │       ├── services/     # Business logic
 │   │       ├── middleware/   # Express middleware
-│   │       └── database/     # SQLite database setup
+│   │       └── database/     # sql.js database setup
 │   └── shared/               # Shared TypeScript types
 ├── electron/                 # Electron main and preload scripts
 ├── dist/                     # Built application files
@@ -77,14 +77,14 @@ PCR/
 
 ### Desktop Integration
 - **Native Application**: Runs as a desktop app on Windows, macOS, and Linux
-- **Offline Capable**: All data stored locally in SQLite database
+- **Offline Capable**: All data stored locally via sql.js
 - **File Dialogs**: Native save/open dialogs for data export
 - **System Tray**: Optional system tray integration
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18 or higher
+- Node.js 23 or higher
 - npm or yarn package manager
 
 ### Installation
@@ -141,7 +141,7 @@ npm run electron:package:linux   # Linux
 ### Default Credentials
 
 After running `npm run create-accounts`:
-- **Admin**: username: `admin`, password: `admin`
+- **Admin**: username: `admin`, password: `vcrt-ebic2026!`
 - **User**: username: `user`, password: `user`
 
 ## 💾 Database
@@ -152,12 +152,13 @@ After running `npm run create-accounts`:
 
 ### Schema
 - **users**: User accounts with authentication
-- **pcr_reports**: Patient care reports (drafts and submitted)
+- **pcr_reports**: Patient care reports (uses status field: draft/completed/submitted/approved)
 - **activity_logs**: Audit trail of system actions
 
 ### Cleanup Service
-- Automatically runs daily at midnight
-- Removes submitted reports older than 24 hours
+- Automatically runs hourly (and on startup)
+- Removes submitted, draft, and approved reports older than 72 hours
+- Activity logs retained for 7 days
 - Configurable retention period in `src/backend/src/services/cleanup.ts`
 
 ## 🔒 Security Features
@@ -327,9 +328,9 @@ npm run electron:package:linux
 - Verify JWT token in localStorage
 - Check CORS configuration for web development
 
-**Database locked errors:**
-- Close any other connections to the database
-- Use better-sqlite3 (not sqlite3) for synchronous operations
+**Database issues:**
+- sql.js runs SQLite in WebAssembly, no native bindings required
+- Database is saved to file periodically and on shutdown
 - Ensure cleanup service isn't conflicting
 
 ## 📄 Scripts Reference

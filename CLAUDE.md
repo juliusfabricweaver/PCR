@@ -53,7 +53,7 @@ npm run create-accounts
 
 This is a **web-based PCR (Patient Care Report) application** built with:
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
-- **Backend**: Express.js + TypeScript + SQLite (better-sqlite3)
+- **Backend**: Express.js + TypeScript + sql.js (SQLite in WebAssembly)
 - **Canvas**: Fabric.js for interactive injury diagrams
 
 ### Key Architecture Patterns
@@ -77,7 +77,7 @@ src/
 │   ├── pages/         # Page components
 │   └── services/      # API communication layer
 ├── backend/           # Express.js backend
-│   ├── src/database/  # SQLite database setup and migrations
+│   ├── src/database/  # sql.js database setup and migrations
 │   ├── src/routes/    # API route handlers
 │   ├── src/services/  # Business logic layer
 │   └── src/middleware/# Express middleware
@@ -101,8 +101,8 @@ src/
 ### API Development
 - Routes defined in `src/backend/src/routes/`
 - Authentication via JWT tokens with middleware protection
-- SQLite database with better-sqlite3 for performance
-- Input validation using Joi schemas
+- sql.js database (SQLite compiled to WebAssembly)
+- Input validation with manual checks in route handlers
 
 ## Key Features
 
@@ -116,10 +116,11 @@ src/
 - JWT-based authentication with role-based access (admin/user)
 - Session timeout with automatic logout warnings
 - Protected routes with redirect handling
-- Default accounts: admin/admin and user/user
+- Default accounts: admin/vcrt-ebic2026! and user/user
 
-### Drafts
-- Cleanup service removes old submissions after 24 hours
+### Cleanup
+- Cleanup service runs hourly, removes old reports (submitted/draft/approved) after 72 hours
+- Activity logs retained for 7 days
 
 ## Testing
 
@@ -136,10 +137,11 @@ src/
 
 ## Database Schema
 
-- SQLite database (`pcr_database.db`)
-- Main tables: users, pcr_reports, drafts, activity_logs
+- sql.js database (`pcr_database.db`)
+- Main tables: users, pcr_reports, activity_logs
+- pcr_reports uses status field (draft/completed/submitted/approved) for all report states
 - Database initialization in `src/backend/src/database/`
-- Cleanup service removes old records automatically
+- Cleanup service runs hourly to remove old records
 
 ## Environment Configuration
 
