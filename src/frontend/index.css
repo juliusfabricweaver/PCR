@@ -40,7 +40,7 @@
     @page {
       margin: 0.5in;
     }
-    
+
     .no-print {
       display: none !important;
     }
@@ -83,7 +83,7 @@
   }
 
   .btn-outline {
-    @apply btn border-2 border-gray-300 text-gray-500 hover:bg-gray-50 focus:ring-gray-500;
+    @apply btn border-2 border-gray-300 dark:border-gray-800 text-gray-500 hover:bg-gray-200 focus:ring-gray-500;
   }
 
   .btn-ghost {
@@ -103,7 +103,8 @@
     @apply form-input pr-10 cursor-pointer;
   }
 
-  .form-checkbox, .form-radio {
+  .form-checkbox,
+  .form-radio {
     @apply h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600;
   }
 
@@ -218,18 +219,18 @@
 @layer utilities {
   /* Custom shadows with color variables */
   .shadow-medical {
-    box-shadow: 
-      0px 0.3px 0.4px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .03)),
-      0px 0.5px 0.6px -1.2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .03)),
-      0px 1.3px 1.5px -2.5px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .06));
+    box-shadow:
+      0px 0.3px 0.4px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 0.03)),
+      0px 0.5px 0.6px -1.2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 0.03)),
+      0px 1.3px 1.5px -2.5px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 0.06));
   }
 
   .shadow-card {
-    box-shadow: 
-      0px 0.6px 0.7px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .36)),
-      0px 1px 1.1px -0.8px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .36)),
-      0px 2.5px 2.8px -1.7px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .36)),
-      0px 6.2px 7px -2.5px hsl(var(--shadow-color) / calc(var(--shadow-strength) + .36));
+    box-shadow:
+      0px 0.6px 0.7px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 0.36)),
+      0px 1px 1.1px -0.8px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 0.36)),
+      0px 2.5px 2.8px -1.7px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 0.36)),
+      0px 6.2px 7px -2.5px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 0.36));
   }
 
   /* Text utilities */
@@ -262,3 +263,4 @@
     }
   }
 }
+
