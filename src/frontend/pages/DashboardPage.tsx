@@ -1,5 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { FileText, Edit, Clock } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { apiRequest } from '../utils/api'
+
+interface DraftReport {
+  id: string
+  status: string
+  created_at: string
+  updated_at: string
+  report_number: string | null
+  patient_name: string | null
+}
 
 type AcronymCategory =
   | 'General'
@@ -16,7 +27,39 @@ interface AcronymItem {
 }
 
 const DashboardPage = () => {
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
+  const [drafts, setDrafts] = useState<DraftReport[]>([])
+  const [draftsLoading, setDraftsLoading] = useState(true)
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const fetchDrafts = async () => {
+      try {
+        const data = await apiRequest('/pcr?status=draft')
+        setDrafts(data.data || [])
+      } catch {
+        // Silently fail - drafts section is non-critical
+      } finally {
+        setDraftsLoading(false)
+      }
+    }
+    fetchDrafts()
+  }, [isAuthenticated])
+
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date()
+    const date = new Date(dateString)
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
+  }
 
   // Medical Acronyms
   const medicalAcronyms: AcronymItem[] = [
@@ -133,10 +176,73 @@ return (
         Welcome back{user?.firstName ? `, ${user.firstName}` : ''}!
       </h1>
       <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-        Use the acronym reference below while writing patient care reports.
+        {drafts.length > 0
+          ? `You have ${drafts.length} draft${drafts.length === 1 ? '' : 's'} in progress.`
+          : 'Use the acronym reference below while writing patient care reports.'}
       </p>
     </div>
 
+      {/* Drafts in Progress */}
+      {!draftsLoading && drafts.length > 0 && (
+        <div className="mb-6">
+          <div className="card">
+            <div className="card-header">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-amber-500" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Drafts in Progress</h3>
+                  <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+                    {drafts.length}
+                  </span>
+                </div>
+                <a
+                  href="#/reports"
+                  className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+                >
+                  View all reports
+                </a>
+              </div>
+            </div>
+            <div className="card-body">
+              <div className="space-y-3">
+                {drafts.slice(0, 5).map((draft) => (
+                  <a
+                    key={draft.id}
+                    href={`#/pcr/new?draftId=${draft.id}`}
+                    className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="shrink-0 h-9 w-9 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                        <Edit className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {draft.patient_name || 'Unnamed patient'}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {draft.report_number ? `#${draft.report_number}` : 'No report number'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 text-xs text-gray-500 dark:text-gray-400">
+                      <Clock className="w-3 h-3" />
+                      <span>{formatTimeAgo(draft.updated_at)}</span>
+                    </div>
+                  </a>
+                ))}
+                {drafts.length > 5 && (
+                  <a
+                    href="#/reports"
+                    className="block text-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 pt-1"
+                  >
+                    +{drafts.length - 5} more drafts
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Medical Acronyms section */}
       <div className="mt-2">

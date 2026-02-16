@@ -64,7 +64,8 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
         created_at,
         updated_at,
         created_by,
-        NULLIF(TRIM(json_extract(form_data, '$.reportNumber')), '') AS report_number
+        NULLIF(TRIM(json_extract(form_data, '$.reportNumber')), '') AS report_number,
+        NULLIF(TRIM(json_extract(form_data, '$.patientName')), '') AS patient_name
       FROM pcr_reports
       `;
     const params: any[] = [];
