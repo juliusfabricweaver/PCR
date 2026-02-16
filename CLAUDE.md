@@ -54,7 +54,7 @@ npm run create-accounts
 This is a **web-based PCR (Patient Care Report) application** built with:
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
 - **Backend**: Express.js + TypeScript + sql.js (SQLite in WebAssembly)
-- **Canvas**: Fabric.js for interactive injury diagrams
+- **Canvas**: HTML5 Canvas for interactive injury diagrams
 
 ### Key Architecture Patterns
 
@@ -107,7 +107,7 @@ src/
 ## Key Features
 
 ### Canvas Injury Diagram
-- Interactive body diagram using Fabric.js
+- Interactive body diagram using native HTML5 Canvas API
 - Drawing tools for marking injuries and annotations
 - Canvas data serialized to JSON for database storage
 - Located in `src/frontend/components/composite/InjuryCanvas.tsx`

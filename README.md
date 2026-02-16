@@ -10,7 +10,7 @@ A comprehensive desktop application for documenting patient care reports, built 
 - React 18 with TypeScript
 - Vite for fast development and building
 - Tailwind CSS for styling
-- Fabric.js for interactive injury diagrams
+- HTML5 Canvas for interactive injury diagrams
 - jsPDF for PDF report generation
 - React Router for navigation
 
@@ -308,7 +308,7 @@ npm run electron:package:linux
 
 ### Hot Reload
 - Frontend: Vite provides instant HMR
-- Backend: Use `nodemon` for auto-restart
+- Backend: Restart manually or use ts-node with watch mode
 - Electron: Restart required for main process changes
 
 ### Debugging
