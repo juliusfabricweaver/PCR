@@ -49,32 +49,22 @@ const ActivityLogsPage = () => {
 
     const fetchUsernames = async () => {
       try {
-        // ✅ Ideal: you have an endpoint that returns users
-        // Adjust the endpoint/shape to your backend
-        const res = await fetch(configService.getApiUrl('/api/users?limit=1000'), {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        })
+        const data = await apiRequest('/users')
+        const users = (data.data ?? []).filter((u: any) => u.username)
 
-        if (!res.ok) throw new Error('Failed to fetch users')
-
-        const json = await res.json()
-
-        // adapt this mapping to your response shape
-        const usernames: string[] = (json.items ?? json.data ?? json ?? [])
-          .map((u: any) => u.username)
-          .filter(Boolean)
-
-        const unique = Array.from(new Set(usernames)).sort((a, b) => a.localeCompare(b))
+        const options = users
+          .map((u: any) => ({
+            value: u.username,
+            label: `${u.firstName ?? ''} ${u.lastName ?? ''} (@${u.username})`.trim(),
+          }))
+          .sort((a: any, b: any) => a.label.localeCompare(b.label))
 
         setUsernameOptions([
           { value: '', label: 'All Users' },
-          ...unique.map((u) => ({ value: u, label: `@${u}` })),
+          ...options,
         ])
-      } catch (e) {
-        // Fallback: build from whatever logs are currently loaded (limited but works)
+      } catch {
+        // Fallback: build from whatever logs are currently loaded
         const unique = Array.from(new Set((logs ?? []).map((l) => l.username).filter(Boolean))).sort()
         setUsernameOptions([
           { value: '', label: 'All Users' },
