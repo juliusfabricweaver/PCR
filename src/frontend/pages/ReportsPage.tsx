@@ -11,6 +11,9 @@ interface PCRReport {
   updated_at: string
   report_number?: string | null
   form_data?: any
+  creator_first_name?: string | null
+  creator_last_name?: string | null
+  creator_username?: string | null
 }
 
 const ReportsPage = () => {
@@ -222,6 +225,11 @@ const ReportsPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Report ID
                     </th>
+                    {isAdmin && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Created By
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
@@ -250,6 +258,16 @@ const ReportsPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                         {displayReportId(report)}
                       </td>
+
+                      {isAdmin && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                          {report.creator_first_name && report.creator_last_name
+                            ? `${report.creator_first_name} ${report.creator_last_name}`
+                            : report.creator_username
+                              ? `@${report.creator_username}`
+                              : '—'}
+                        </td>
+                      )}
 
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span

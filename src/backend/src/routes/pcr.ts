@@ -59,14 +59,18 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
 
     let query = `
       SELECT
-        id,
-        status,
-        created_at,
-        updated_at,
-        created_by,
+        pcr_reports.id,
+        pcr_reports.status,
+        pcr_reports.created_at,
+        pcr_reports.updated_at,
+        pcr_reports.created_by,
         NULLIF(TRIM(json_extract(form_data, '$.reportNumber')), '') AS report_number,
-        NULLIF(TRIM(json_extract(form_data, '$.patientName')), '') AS patient_name
+        NULLIF(TRIM(json_extract(form_data, '$.patientName')), '') AS patient_name,
+        users.first_name AS creator_first_name,
+        users.last_name AS creator_last_name,
+        users.username AS creator_username
       FROM pcr_reports
+      LEFT JOIN users ON pcr_reports.created_by = users.id
       `;
     const params: any[] = [];
 
@@ -81,7 +85,7 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
       params.push(status);
     }
 
-    query += ' ORDER BY updated_at DESC LIMIT ? OFFSET ?';
+    query += ' ORDER BY pcr_reports.updated_at DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit as string), parseInt(offset as string));
 
     const reports = db.prepare(query).all(...params);

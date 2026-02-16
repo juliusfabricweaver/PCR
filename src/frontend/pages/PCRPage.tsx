@@ -22,7 +22,17 @@ import { apiRequest } from '../utils/api'
 import type { PCRFormData, VitalSign, VitalSigns2 } from '../types'
 
 const PCRPage: React.FC = () => {
-  const { data, updateField, errors, isDirty, isValid, reset, validateField, validateAll, loadData } = useForm()
+  const {
+    data,
+    updateField,
+    errors,
+    isDirty,
+    isValid,
+    reset,
+    validateField,
+    validateAll,
+    loadData,
+  } = useForm()
   const { showNotification } = useNotification()
   const { token, isAuthenticated, user: currentUser } = useAuth()
   const isAdmin = currentUser?.role === 'admin'
@@ -35,7 +45,6 @@ const PCRPage: React.FC = () => {
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [signOffPdf, setSignOffPdf] = useState<File | null>(null)
   const [signOffPdfError, setSignOffPdfError] = useState<string>('')
-  const lastAutoCommentsRef = React.useRef<string>('')
 
   // Helper function to convert File to base64
   const fileToBase64 = (file: File): Promise<string> => {
@@ -124,8 +133,8 @@ const PCRPage: React.FC = () => {
       }
 
       if (!data.date) {
-        const todayISO = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-        updateField('date', todayISO);
+        const todayISO = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+        updateField('date', todayISO)
       }
     }
 
@@ -142,9 +151,10 @@ const PCRPage: React.FC = () => {
       if (Object.keys(formErrors).length > 0) {
         const errorMessages = Object.values(formErrors).slice(0, 5)
         const remaining = Object.keys(formErrors).length - 5
-        const message = remaining > 0
-          ? `${errorMessages.join(', ')} and ${remaining} more`
-          : errorMessages.join(', ')
+        const message =
+          remaining > 0
+            ? `${errorMessages.join(', ')} and ${remaining} more`
+            : errorMessages.join(', ')
         showNotification(`Please complete required fields: ${message}`, 'error')
 
         // Scroll to the first invalid field after React re-renders the errors
@@ -163,7 +173,10 @@ const PCRPage: React.FC = () => {
       // Validate form data for PDF generation
       const validation = pdfService.validateDataForPDF(data)
       if (!validation.isValid) {
-        showNotification(`Please complete required fields: ${validation.errors.join(', ')}`, 'error')
+        showNotification(
+          `Please complete required fields: ${validation.errors.join(', ')}`,
+          'error',
+        )
         setIsSubmitting(false)
         return
       }
@@ -173,84 +186,83 @@ const PCRPage: React.FC = () => {
         data,
         { appendPdf: signOffPdf ?? undefined },
         async (confirmed, timestamp) => {
-        if (confirmed) {
-          try {
-            // Determine URL and method based on context
-            // Admin editing submitted report, updating draft, or creating new
-            const reportIdToUpdate = currentReportId || currentDraftId
-            const url = reportIdToUpdate ? `/pcr/${reportIdToUpdate}` : '/submissions'
-            const method = reportIdToUpdate ? 'PUT' : 'POST'
+          if (confirmed) {
+            try {
+              // Determine URL and method based on context
+              // Admin editing submitted report, updating draft, or creating new
+              const reportIdToUpdate = currentReportId || currentDraftId
+              const url = reportIdToUpdate ? `/pcr/${reportIdToUpdate}` : '/submissions'
+              const method = reportIdToUpdate ? 'PUT' : 'POST'
 
-            // Convert sign-off PDF to base64 if present
-            let signOffBase64: string | null = null
-            let signOffFilename: string | null = null
-            if (signOffPdf) {
-              signOffBase64 = await fileToBase64(signOffPdf)
-              signOffFilename = signOffPdf.name
+              // Convert sign-off PDF to base64 if present
+              let signOffBase64: string | null = null
+              let signOffFilename: string | null = null
+              if (signOffPdf) {
+                signOffBase64 = await fileToBase64(signOffPdf)
+                signOffFilename = signOffPdf.name
+              }
+
+              await apiRequest(url, {
+                method,
+                body: JSON.stringify(
+                  reportIdToUpdate
+                    ? {
+                        form_data: {
+                          ...data,
+                          downloadedAt: timestamp,
+                          downloadConfirmed: true,
+                        },
+                        status: 'submitted',
+                        sign_off_attachment: signOffBase64,
+                        sign_off_filename: signOffFilename,
+                      }
+                    : {
+                        data: {
+                          ...data,
+                          downloadedAt: timestamp,
+                          downloadConfirmed: true,
+                        },
+                        sign_off_attachment: signOffBase64,
+                        sign_off_filename: signOffFilename,
+                      },
+                ),
+              })
+
+              const successMessage = currentReportId
+                ? 'Report updated successfully'
+                : currentDraftId
+                  ? 'Draft updated and submitted successfully'
+                  : 'PCR form submitted successfully'
+              showNotification(successMessage, 'success')
+              reset()
+              setSignOffPdf(null)
+              // Clear state and URL to start fresh
+              setCurrentReportId(null)
+              setCurrentDraftId(null)
+              setLoadedStatus(null)
+              window.location.hash = '#/pcr/new'
+            } catch (submitError) {
+              console.error('Submission failed:', submitError)
+              showNotification('Failed to submit PCR form to server', 'error')
             }
-
-            await apiRequest(url, {
-              method,
-              body: JSON.stringify(
-                reportIdToUpdate
-                  ? {
-                      form_data: {
-                        ...data,
-                        downloadedAt: timestamp,
-                        downloadConfirmed: true
-                      },
-                      status: 'submitted',
-                      sign_off_attachment: signOffBase64,
-                      sign_off_filename: signOffFilename
-                    }
-                  : {
-                      data: {
-                        ...data,
-                        downloadedAt: timestamp,
-                        downloadConfirmed: true
-                      },
-                      sign_off_attachment: signOffBase64,
-                      sign_off_filename: signOffFilename
-                    }
-              )
-            })
-
-            const successMessage = currentReportId
-              ? 'Report updated successfully'
-              : currentDraftId
-                ? 'Draft updated and submitted successfully'
-                : 'PCR form submitted successfully'
-            showNotification(successMessage, 'success')
-            reset()
-            setSignOffPdf(null)
-            // Clear state and URL to start fresh
-            setCurrentReportId(null)
-            setCurrentDraftId(null)
-            setLoadedStatus(null)
-            window.location.hash = '#/pcr/new'
-          } catch (submitError) {
-            console.error('Submission failed:', submitError)
-            showNotification('Failed to submit PCR form to server', 'error')
+          } else {
+            // User cancelled - don't submit to backend
+            showNotification('Form submission cancelled', 'info')
           }
-        } else {
-          // User cancelled - don't submit to backend
-          showNotification('Form submission cancelled', 'info')
-        }
-        setIsSubmitting(false)
-      },
-      { allowDownload: isAdmin }
-    )
+          setIsSubmitting(false)
+        },
+        { allowDownload: isAdmin },
+      )
     } catch (error) {
       console.error('PDF generation failed:', error)
       showNotification(
         signOffPdf
           ? 'Failed to generate PDF (could not append the sign-off PDF). Try a different PDF or remove it.'
           : 'Failed to generate PDF report',
-        'error'
+        'error',
       )
       setIsSubmitting(false)
     }
-
   }
 
   const handleReset = () => {
@@ -297,8 +309,8 @@ const PCRPage: React.FC = () => {
           form_data: data,
           status: 'draft',
           sign_off_attachment: signOffBase64,
-          sign_off_filename: signOffFilename
-        })
+          sign_off_filename: signOffFilename,
+        }),
       })
 
       // If this was a new draft, update our current draft ID
@@ -368,7 +380,7 @@ const PCRPage: React.FC = () => {
   const fillSampleData = () => {
     const sampleData: Partial<PCRFormData> = {
       // --- Basic Information (required) ---
-      date: formatDate(new Date()),                 
+      date: formatDate(new Date()),
       location: 'Morisset 6th floor',
       callNumber: '002',
       reportNumber: '2026-001',
@@ -388,8 +400,8 @@ const PCRPage: React.FC = () => {
       paramedicsCalledBy: 'Responder 1',
 
       // --- Patient Information ---
-      patientName: 'Harry Potter',                 
-      age: '25',                                                            
+      patientName: 'Harry Potter',
+      age: '25',
       sex: 'Male',
       status: 'Student',
 
@@ -401,7 +413,7 @@ const PCRPage: React.FC = () => {
       contactedBy: 'Harry Potter',
 
       // --- Treatment / Findings ---
-      positionOfPatient: 'Seated',                
+      positionOfPatient: 'Seated',
       airwayManagement: ['Positioning'],
       hemorrhageControl: ['Direct Pressure'],
       immobilization: [],
@@ -417,7 +429,7 @@ const PCRPage: React.FC = () => {
       provocation: 'Movement worsens',
       quality: 'Sharp',
       radiation: 'None',
-      scale: 4 as any, 
+      scale: 4 as any,
       time: '14:20',
 
       // --- Medical History (all these textareas were set with requireUnknown) ---
@@ -440,9 +452,9 @@ const PCRPage: React.FC = () => {
       comments: 'VCRT Responders (NAMES) were called at yada yada',
       transferComments: 'Patient care transferred to paramedics yada yada yada.',
       patientCareTransferred: 'Paramedics',
-      hospitalDestination: 'MontFort Hospital',        
-      unitNumber: 'A-123',                         
-      timeCareTransferred: '15:12',                
+      hospitalDestination: 'MontFort Hospital',
+      unitNumber: 'A-123',
+      timeCareTransferred: '15:12',
     }
 
     Object.entries(sampleData).forEach(([key, value]) => {
@@ -459,8 +471,7 @@ const PCRPage: React.FC = () => {
       return
     }
 
-    const isPdf =
-      file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
     const maxMb = 15
     const maxBytes = maxMb * 1024 * 1024
 
@@ -480,8 +491,7 @@ const PCRPage: React.FC = () => {
   }
 
   const hasTourniquet =
-    Array.isArray(data.hemorrhageControl) &&
-    data.hemorrhageControl.includes('Tourniquet')
+    Array.isArray(data.hemorrhageControl) && data.hemorrhageControl.includes('Tourniquet')
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -489,7 +499,9 @@ const PCRPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {currentReportId && (loadedStatus === 'submitted' || loadedStatus === 'approved') && isAdmin
+            {currentReportId &&
+            (loadedStatus === 'submitted' || loadedStatus === 'approved') &&
+            isAdmin
               ? 'Edit Submitted Patient Care Report (Admin)'
               : currentDraftId
                 ? 'Edit Patient Care Report Draft'
@@ -498,23 +510,19 @@ const PCRPage: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400">
             {isLoadingDraft
               ? 'Loading...'
-              : currentReportId && (loadedStatus === 'submitted' || loadedStatus === 'approved') && isAdmin
+              : currentReportId &&
+                  (loadedStatus === 'submitted' || loadedStatus === 'approved') &&
+                  isAdmin
                 ? 'Editing submitted report as admin - changes will update the existing report'
                 : currentDraftId
                   ? 'Editing existing draft - complete and submit when ready'
-                  : 'Complete all required fields to submit the report'
-            }
+                  : 'Complete all required fields to submit the report'}
           </p>
         </div>
 
         <div className="flex items-center space-x-2">
           {/* Test buttons for development */}
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm" 
-            onClick={fillSampleData}
-          >
+          <Button type="button" variant="outline" size="sm" onClick={fillSampleData}>
             Fill Sample Data
           </Button>
 
@@ -547,10 +555,10 @@ const PCRPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <DatePicker
               label="Date"
-              value={data.date ?? ''}   // don’t show fallback directly here
+              value={data.date ?? ''} // don’t show fallback directly here
               onChange={(v: any) => {
-                const next = typeof v === 'string' ? v : v?.target?.value ?? '';
-                updateField('date', next);
+                const next = typeof v === 'string' ? v : (v?.target?.value ?? '')
+                updateField('date', next)
               }}
               error={errors.date}
               required
@@ -906,26 +914,26 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         {/* Treatment Performed */}
-		    <FormSection 
-			    title="Treatment Performed" 
-			    subtitle="Interventions and care provided to the patient"
-		    >
-			    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-				    <div className="space-y-4">
-					    <CheckboxGroup
-						    name="airwayManagement"
-						    label="Airway Management"
-						    options={[
-							    { value: 'Suctioning', label: 'Suctioning' },
-							    { value: 'Positioning', label: 'Positioning' },
-							    { value: 'OPA', label: 'OPA' },
-							    { value: 'BVM', label: 'BVM' },
-							    { value: 'Pocket Mask', label: 'Pocket Mask' },
-							    { value: 'Other', label: 'Other' },
-						    ]}
-						    value={Array.isArray(data.airwayManagement) ? data.airwayManagement : []}
-						    onChange={(value) => updateField('airwayManagement', value)}
-					    />
+        <FormSection
+          title="Treatment Performed"
+          subtitle="Interventions and care provided to the patient"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <CheckboxGroup
+                name="airwayManagement"
+                label="Airway Management"
+                options={[
+                  { value: 'Suctioning', label: 'Suctioning' },
+                  { value: 'Positioning', label: 'Positioning' },
+                  { value: 'OPA', label: 'OPA' },
+                  { value: 'BVM', label: 'BVM' },
+                  { value: 'Pocket Mask', label: 'Pocket Mask' },
+                  { value: 'Other', label: 'Other' },
+                ]}
+                value={Array.isArray(data.airwayManagement) ? data.airwayManagement : []}
+                onChange={value => updateField('airwayManagement', value)}
+              />
 
               <CheckboxGroup
                 name="hemorrhageControl"
@@ -936,7 +944,7 @@ const PCRPage: React.FC = () => {
                   { value: 'Tourniquet', label: 'Tourniquet' },
                 ]}
                 value={Array.isArray(data.hemorrhageControl) ? data.hemorrhageControl : []}
-                onChange={(value) => {
+                onChange={value => {
                   updateField('hemorrhageControl', value)
                   if (!value.includes('Tourniquet')) {
                     updateField('timeApplied', '')
@@ -954,7 +962,7 @@ const PCRPage: React.FC = () => {
                   { value: 'C-spine Manually Held', label: 'C-spine Manually Held' },
                 ]}
                 value={Array.isArray(data.immobilization) ? data.immobilization : []}
-                onChange={(value) => updateField('immobilization', value)}
+                onChange={value => updateField('immobilization', value)}
               />
             </div>
 
@@ -965,16 +973,16 @@ const PCRPage: React.FC = () => {
                   <TimePicker
                     label="Time Started"
                     value={data.timeStarted || ''}
-                    onChange={(e) => updateField('timeStarted', e.target.value)}
+                    onChange={e => updateField('timeStarted', e.target.value)}
                   />
                   <Input
                     label="Number of Cycles"
                     type="number"
                     value={data.numberOfCycles || ''}
-                    onChange={(e) => updateField('numberOfCycles', e.target.value)}
+                    onChange={e => updateField('numberOfCycles', e.target.value)}
                     placeholder="0"
                   />
-                 </div>
+                </div>
               </div>
 
               <div className="border rounded-lg p-4 space-y-3">
@@ -984,14 +992,14 @@ const PCRPage: React.FC = () => {
                     label="Shocks (#)"
                     type="number"
                     value={data.numberOfShocks || ''}
-                    onChange={(e) => updateField('numberOfShocks', e.target.value)}
+                    onChange={e => updateField('numberOfShocks', e.target.value)}
                     placeholder="0"
                   />
                   <Input
                     label="Shock Not Advised (#)"
                     type="number"
                     value={data.shockNotAdvised || ''}
-                    onChange={(e) => updateField('shockNotAdvised', e.target.value)}
+                    onChange={e => updateField('shockNotAdvised', e.target.value)}
                     placeholder="0"
                   />
                 </div>
@@ -1004,13 +1012,13 @@ const PCRPage: React.FC = () => {
                     <TimePicker
                       label="Time Applied"
                       value={data.timeApplied || ''}
-                      onChange={(e) => updateField('timeApplied', e.target.value)}
+                      onChange={e => updateField('timeApplied', e.target.value)}
                     />
                     <Input
                       label="Number of Turns"
                       type="number"
                       value={data.numberOfTurns || ''}
-                      onChange={(e) => updateField('numberOfTurns', e.target.value)}
+                      onChange={e => updateField('numberOfTurns', e.target.value)}
                       placeholder="0"
                     />
                   </div>
@@ -1022,105 +1030,86 @@ const PCRPage: React.FC = () => {
           <Input
             label="Position of Patient"
             value={data.positionOfPatient || ''}
-            onChange={(e) => updateField('positionOfPatient', e.target.value)}
+            onChange={e => updateField('positionOfPatient', e.target.value)}
             error={errors.positionOfPatient}
             placeholder="e.g. Seated, Supine, Prone, Semi-Prone..."
             required
           />
         </FormSection>
 
-
         {/* OPQRST Assessment */}
-        <FormSection 
-          title="OPQRST Assessment" 
-          subtitle="Pain and symptom assessment"
-        >
+        <FormSection title="OPQRST Assessment" subtitle="Pain and symptom assessment">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Input
               label="Onset"
               value={data.onset || ''}
-              onChange={(e) => updateField('onset', e.target.value)}
+              onChange={e => updateField('onset', e.target.value)}
               placeholder="Acute/chronic"
             />
-            
+
             <Input
               label="Provocation"
               value={data.provocation || ''}
-              onChange={(e) => updateField('provocation', e.target.value)}
+              onChange={e => updateField('provocation', e.target.value)}
               placeholder="What makes it better/worse?"
             />
-            
+
             <Input
               label="Quality"
               value={data.quality || ''}
-              onChange={(e) => updateField('quality', e.target.value)}
+              onChange={e => updateField('quality', e.target.value)}
               placeholder="How does it feel?"
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Input
               label="Radiation"
               value={data.radiation || ''}
-              onChange={(e) => updateField('radiation', e.target.value)}
+              onChange={e => updateField('radiation', e.target.value)}
               placeholder="Where does it radiate?"
             />
-            
+
             <Input
               label="Scale (1-10)"
               value={data.scale || ''}
-              onChange={(e) => updateField('scale', e.target.value)}
+              onChange={e => updateField('scale', e.target.value)}
               placeholder="Pain scale"
             />
-            
+
             <Input
               label="Time"
               value={data.time || ''}
-              onChange={(e) => updateField('time', e.target.value)}
+              onChange={e => updateField('time', e.target.value)}
               placeholder="What time did it occur?"
             />
           </div>
         </FormSection>
 
         {/* Injury Location */}
-        <FormSection 
-          title="Injury Location" 
-          subtitle="Mark injury locations on body diagram"
-        >
+        <FormSection title="Injury Location" subtitle="Mark injury locations on body diagram">
           <InjuryCanvas
             value={data.injuryCanvas}
-            onChange={(value) => updateField('injuryCanvas', value)}
+            onChange={value => updateField('injuryCanvas', value)}
           />
         </FormSection>
 
         {/* Vital Signs Table 1 */}
-        <FormSection 
-          title="Vital Signs" 
-          subtitle="Patient vital signs measurements"
-        >
-          <VitalSignsTable
-            data={data.vitalSigns || []}
-            onChange={handleVitalSignsChange}
-          />
+        <FormSection title="Vital Signs" subtitle="Patient vital signs measurements">
+          <VitalSignsTable data={data.vitalSigns || []} onChange={handleVitalSignsChange} />
         </FormSection>
 
         {/* Oxygen Protocol */}
-        <FormSection 
-          title="Oxygen Protocol" 
-          subtitle="Oxygen therapy administration details"
-        >
+        <FormSection title="Oxygen Protocol" subtitle="Oxygen therapy administration details">
           <OxygenProtocolForm
             data={data.oxygenProtocol || {}}
-            onChange={(oxygenProtocolData) => updateField('oxygenProtocol', oxygenProtocolData)}
+            onChange={oxygenProtocolData => updateField('oxygenProtocol', oxygenProtocolData)}
             errors={errors}
           />
         </FormSection>
 
         {/* Vital Signs Table 2 */}
-        <FormSection 
-          title="Additional Vital Signs" 
-          subtitle="SpO2 measurements over time"
-        >
+        <FormSection title="Additional Vital Signs" subtitle="SpO2 measurements over time">
           <VitalSignsTable
             data={data.vitalSigns2 || []}
             onChange={handleVitalSigns2Change}
@@ -1133,8 +1122,8 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         {/* Additional Information */}
-        <FormSection 
-          title="Additional Information" 
+        <FormSection
+          title="Additional Information"
           subtitle="Call details and patient transfer information"
           required
         >
@@ -1142,24 +1131,24 @@ const PCRPage: React.FC = () => {
             <Textarea
               label="Call Description"
               value={data.comments || ''}
-              onChange={(e) => updateField('comments', e.target.value)}
+              onChange={e => updateField('comments', e.target.value)}
               error={errors.comments}
               placeholder="Detailed description of the call..."
               rows={4}
               required
             />
-            
+
             <Textarea
               label="Transfer of Care"
               value={data.transferComments || ''}
-              onChange={(e) => updateField('transferComments', e.target.value)}
+              onChange={e => updateField('transferComments', e.target.value)}
               error={errors.transferComments}
               placeholder="Details about patient transfer..."
               rows={3}
               required
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
               <RadioGroup
@@ -1173,35 +1162,35 @@ const PCRPage: React.FC = () => {
                   { value: 'Clinic', label: 'Clinic' },
                 ]}
                 value={data.patientCareTransferred}
-                onChange={(value) => updateField('patientCareTransferred', value)}
+                onChange={value => updateField('patientCareTransferred', value)}
                 error={errors.patientCareTransferred}
                 required
               />
-              
+
               {data.patientCareTransferred === 'Paramedics' && (
                 <>
                   <Input
                     label="Unit Number"
                     value={data.unitNumber || ''}
-                    onChange={(e) => updateField('unitNumber', e.target.value)}
+                    onChange={e => updateField('unitNumber', e.target.value)}
                     placeholder="Paramedic unit number"
                     requireUnknown
                   />
                   <Input
                     label="Hospital Destination"
                     value={data.hospitalDestination || ''}
-                    onChange={(e) => updateField('hospitalDestination', e.target.value)}
+                    onChange={e => updateField('hospitalDestination', e.target.value)}
                     placeholder="e.g., The Ottawa Hospital - Civic"
                     requireUnknown
                   />
-                 </>
+                </>
               )}
 
               {data.patientCareTransferred === 'Police' && (
                 <Input
                   label="Badge Number"
                   value={data.badgeNumber || ''}
-                  onChange={(e) => updateField('badgeNumber', e.target.value)}
+                  onChange={e => updateField('badgeNumber', e.target.value)}
                   placeholder="Police badge number"
                   requireUnknown
                 />
@@ -1211,17 +1200,17 @@ const PCRPage: React.FC = () => {
                 <Input
                   label="Clinic Name"
                   value={data.clinicName || ''}
-                  onChange={(e) => updateField('clinicName', e.target.value)}
+                  onChange={e => updateField('clinicName', e.target.value)}
                   placeholder="Clinic name"
                   requireUnknown
                 />
               )}
             </div>
-            
+
             <TimePicker
               label="Time Care Transferred"
               value={data.timeCareTransferred || ''}
-              onChange={(e) => updateField('timeCareTransferred', e.target.value)}
+              onChange={e => updateField('timeCareTransferred', e.target.value)}
               error={errors.timeCareTransferred}
               required
             />
@@ -1236,10 +1225,10 @@ const PCRPage: React.FC = () => {
             className={cn(
               'border-2 border-dashed rounded-lg p-4 transition',
               'hover:bg-gray-50 dark:hover:bg-gray-800/40',
-              signOffPdfError ? 'border-red-300' : 'border-gray-300'
+              signOffPdfError ? 'border-red-300' : 'border-gray-300',
             )}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => {
               e.preventDefault()
               const file = e.dataTransfer.files?.[0]
               validateAndSetSignOff(file ?? null)
@@ -1257,7 +1246,7 @@ const PCRPage: React.FC = () => {
                   type="file"
                   accept="application/pdf,.pdf"
                   className="hidden"
-                  onChange={(e) => validateAndSetSignOff(e.target.files?.[0] ?? null)}
+                  onChange={e => validateAndSetSignOff(e.target.files?.[0] ?? null)}
                 />
                 <span className="text-sm font-medium text-blue-600 hover:text-blue-800">
                   Browse
@@ -1280,9 +1269,7 @@ const PCRPage: React.FC = () => {
               </div>
             )}
 
-            {signOffPdfError && (
-              <div className="mt-2 text-sm text-red-600">{signOffPdfError}</div>
-            )}
+            {signOffPdfError && <div className="mt-2 text-sm text-red-600">{signOffPdfError}</div>}
           </div>
         </FormSection>
 
@@ -1357,3 +1344,4 @@ const PCRPage: React.FC = () => {
 }
 
 export default PCRPage
+
