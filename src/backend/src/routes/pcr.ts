@@ -353,8 +353,8 @@ router.get('/cleanup/preview', authenticateToken, (req: AuthenticatedRequest, re
         oldestReportDate: preview.oldestPCRDate,
         logsToDelete: preview.logsCount,
         oldestLogDate: preview.oldestLogDate,
-        pcrRetentionPeriod: '72 hours',
-        logRetentionPeriod: '7 days'
+        pcrRetentionPeriod: '1 year',
+        logRetentionPeriod: '4 months'
       }
     });
 

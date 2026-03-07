@@ -3,20 +3,20 @@ import db from '../database'
 export class CleanupService {
   private cleanupInterval: NodeJS.Timeout | null = null
 
-  // Configurable retention periods
-  private readonly PCR_RETENTION_HOURS = 72
-  private readonly LOG_RETENTION_DAYS = 7
+  // Retention periods
+  private readonly PCR_RETENTION_YEARS = 1
+  private readonly LOG_RETENTION_DAYS = 120 // ~4 months
 
   start(): void {
     console.log('📅 Starting cleanup service...')
 
-    // Run cleanup immediately on start
+    // Run cleanup immediately
     this.runCleanup()
 
-    // Schedule cleanup to run every hour
+    // Run every hour
     this.cleanupInterval = setInterval(() => {
       this.runCleanup()
-    }, 60 * 60 * 1000) // 1 hour
+    }, 60 * 60 * 1000)
   }
 
   stop(): void {
@@ -31,17 +31,13 @@ export class CleanupService {
     try {
       console.log('🧹 Running cleanup...')
 
-      // Delete PCR reports older than configured retention
       const pcrResult = this.cleanupPCRReports()
-
-      // Delete activity logs older than configured retention
       const logsResult = this.cleanupActivityLogs()
 
       if (pcrResult.changes > 0 || logsResult.changes > 0) {
-        console.log(`🗑️  Deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_HOURS} hours`)
-        console.log(`🗑️  Deleted ${logsResult.changes} activity log(s) older than ${this.LOG_RETENTION_DAYS} days`)
+        console.log(`🗑️ Deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_YEARS} year`)
+        console.log(`🗑️ Deleted ${logsResult.changes} activity log(s) older than ${this.LOG_RETENTION_DAYS} days`)
 
-        // Log the cleanup activity
         this.logCleanupActivity(pcrResult.changes, logsResult.changes)
       } else {
         console.log('✅ No records to clean up')
@@ -56,7 +52,7 @@ export class CleanupService {
     const deleteQuery = `
       DELETE FROM pcr_reports
       WHERE status IN ('submitted','draft','approved')
-      AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
+      AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_YEARS} year')
     `
     return db.prepare(deleteQuery).run()
   }
@@ -71,7 +67,6 @@ export class CleanupService {
 
   private logCleanupActivity(deletedPCRCount: number, deletedLogsCount: number): void {
     try {
-      // Create a system activity log entry
       const logId = 'log_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
 
       db.prepare(`
@@ -79,13 +74,13 @@ export class CleanupService {
         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `).run(
         logId,
-        'system', // Use 'system' as user_id for automated tasks
+        'system',
         'cleanup_pcr_reports',
         'pcr_report',
         JSON.stringify({
           deletedPCRCount,
           deletedLogsCount,
-          pcrRetention: `${this.PCR_RETENTION_HOURS}_hour_retention`,
+          pcrRetention: `${this.PCR_RETENTION_YEARS}_year_retention`,
           logRetention: `${this.LOG_RETENTION_DAYS}_day_retention`
         })
       )
@@ -94,20 +89,17 @@ export class CleanupService {
     }
   }
 
-  // Manual cleanup method for testing or admin use
   manualCleanup(): { deletedPCRCount: number; deletedLogsCount: number } {
     try {
       console.log('🧹 Running manual cleanup...')
 
-      // Delete PCR reports older than configured retention
       const pcrDeleteQuery = `
         DELETE FROM pcr_reports
         WHERE status IN ('submitted','approved')
-        AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
+        AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_YEARS} year')
       `
       const pcrResult = db.prepare(pcrDeleteQuery).run()
 
-      // Delete activity logs older than configured retention
       const logsDeleteQuery = `
         DELETE FROM activity_logs
         WHERE datetime(created_at) < datetime('now', '-${this.LOG_RETENTION_DAYS} days')
@@ -115,8 +107,8 @@ export class CleanupService {
       const logsResult = db.prepare(logsDeleteQuery).run()
 
       if (pcrResult.changes > 0 || logsResult.changes > 0) {
-        console.log(`🗑️  Manually deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_HOURS} hours`)
-        console.log(`🗑️  Manually deleted ${logsResult.changes} activity log(s) older than ${this.LOG_RETENTION_DAYS} days`)
+        console.log(`🗑️ Manually deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_YEARS} year`)
+        console.log(`🗑️ Manually deleted ${logsResult.changes} activity log(s) older than ${this.LOG_RETENTION_DAYS} days`)
         this.logCleanupActivity(pcrResult.changes, logsResult.changes)
       }
 
@@ -131,28 +123,27 @@ export class CleanupService {
     }
   }
 
-  // Get count of reports and logs that would be deleted (for preview)
   getCleanupPreview(): {
-    pcrCount: number;
-    oldestPCRDate: string | null;
-    logsCount: number;
-    oldestLogDate: string | null;
+    pcrCount: number
+    oldestPCRDate: string | null
+    logsCount: number
+    oldestLogDate: string | null
   } {
     try {
       const pcrQuery = `
         SELECT COUNT(*) as count, MIN(created_at) as oldestDate
         FROM pcr_reports
         WHERE status IN ('submitted','approved')
-        AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
+        AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_YEARS} year')
       `
-      const pcrResult = db.prepare(pcrQuery).get() as { count: number, oldestDate: string | null }
+      const pcrResult = db.prepare(pcrQuery).get() as { count: number; oldestDate: string | null }
 
       const logsQuery = `
         SELECT COUNT(*) as count, MIN(created_at) as oldestDate
         FROM activity_logs
         WHERE datetime(created_at) < datetime('now', '-${this.LOG_RETENTION_DAYS} days')
       `
-      const logsResult = db.prepare(logsQuery).get() as { count: number, oldestDate: string | null }
+      const logsResult = db.prepare(logsQuery).get() as { count: number; oldestDate: string | null }
 
       return {
         pcrCount: pcrResult.count,
@@ -168,5 +159,4 @@ export class CleanupService {
   }
 }
 
-// Export singleton instance
 export const cleanupService = new CleanupService()

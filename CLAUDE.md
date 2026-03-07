@@ -119,8 +119,8 @@ src/
 - Default accounts: admin/vcrt-ebic2026! and user/user
 
 ### Cleanup
-- Cleanup service runs hourly, removes old reports (submitted/draft/approved) after 72 hours
-- Activity logs retained for 7 days
+- Cleanup service runs hourly, removes old reports (submitted/draft/approved) after a year
+- Activity logs retained for 4 months
 
 ## Testing
 
