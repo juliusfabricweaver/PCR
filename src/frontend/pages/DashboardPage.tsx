@@ -127,6 +127,12 @@ const DashboardPage = () => {
     { acronym: 'WDN', meaning: 'Warm, dry, normal skin', category: 'Assessment' },
   ]
 
+  const samplePCRText = `VCRT responders (RESP NAMES) were notified at TIME NOTIF of a call at LOC for a patient CHIEF COMPLAINT. VCRT
+  arrived on scene at TIME ARV to find patient (pt) (PT NAME) PT POSITION. VCRT (RESP NAME) obtained consent and began treatment.
+  VCRT (RESP NAME) performed primary assessment and RBS. RBS found (MAJOR RBS FINDINGS). SMR was ruled out (REASON). VCRT (RESP NAME)
+  obtained SAMPLE (and OPQRST) while VCRT (RESP NAME) obtained first set of vitals. Vitals were (NORMAL / NOT NORMAL, OBTAINED / NOT OBTAINED - REASON).
+  Pt reported (PT EVENTS AND COMPLAINTS). VCRT gave / performed / advised (Tx AND ADVICE). Second set of vitals...`
+
   const categories: Array<'All' | AcronymCategory> = [
     'All',
     'General',
@@ -171,6 +177,16 @@ const DashboardPage = () => {
       setTimeout(() => setCopiedKey(null), 1200)
     } catch {
       // Clipboard can fail in some browser contexts
+    }
+  }
+
+  const handleCopySamplePCR = async () => {
+    try {
+      await navigator.clipboard.writeText(samplePCRText)
+      setCopiedKey('sample-pcr')
+      setTimeout(() => setCopiedKey(null), 1200)
+    } catch {
+      // Clipboard may fail silently
     }
   }
 
@@ -245,6 +261,38 @@ const DashboardPage = () => {
         </div>
       )}
 
+      {/* Sample PCR Section */}
+      <div className="mb-6">
+        <div className="card">
+          <div className="card-header">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  Sample PCR
+                </h3>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  Example format for a patient care report
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCopySamplePCR}
+                className="text-xs px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300"
+              >
+                {copiedKey === 'sample-pcr' ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          </div>
+
+          <div className="card-body">
+            <pre className="text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+      {samplePCRText}
+            </pre>
+          </div>
+        </div>
+      </div>
+
       {/* Medical Acronyms section */}
       <div className="mt-2">
         <div className="card">
@@ -252,7 +300,7 @@ const DashboardPage = () => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  Medical Acronyms
+                  Medical Glossary Terms
                 </h3>
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                   Quick reference to speed up patient care report writing
