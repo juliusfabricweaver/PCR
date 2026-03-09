@@ -3,7 +3,9 @@ import path from 'path';
 import * as fs from 'fs';
 
 // Environment detection
-const isDev = process.env.NODE_ENV === 'development';
+// app.isPackaged is false when running `electron .` from source, true in built .app/.exe
+const isPackaged = app.isPackaged;
+const isDev = !isPackaged && process.env.NODE_ENV === 'development';
 
 // Debug logging to file (for Windows debugging)
 const logFile = path.join(app.getPath('userData'), 'debug.log');
@@ -54,21 +56,20 @@ async function startBackend(): Promise<void> {
     // Dynamically load the backend module
     let backendPath: string;
 
-    if (isDev) {
-      // In development, use ts-node register
-      require('ts-node/register/transpile-only');
-      // __dirname is dist/electron/ when running compiled, so go up two levels to project root
-      backendPath = path.join(__dirname, '..', '..', 'src', 'backend', 'src', 'index');
-      log(`Dev backend path: ${backendPath}`);
-    } else {
-      // In production, load compiled JS from asar.unpacked
+    if (isPackaged) {
+      // In packaged app, load compiled JS from asar.unpacked
       backendPath = path.join(process.resourcesPath, 'app.asar.unpacked/dist/backend/backend/src/index.js');
-      log(`Prod backend path: ${backendPath}`);
+      log(`Packaged backend path: ${backendPath}`);
+    } else {
+      // Running unpackaged (electron .), use compiled JS from dist/
+      // __dirname is dist/electron/ when running compiled, so go up one level to dist/
+      backendPath = path.join(__dirname, '..', 'backend', 'backend', 'src', 'index.js');
+      log(`Unpackaged backend path: ${backendPath}`);
+    }
 
-      // Check if file exists
-      if (!fs.existsSync(backendPath)) {
-        throw new Error(`Backend file not found: ${backendPath}`);
-      }
+    // Check if file exists
+    if (!fs.existsSync(backendPath)) {
+      throw new Error(`Backend file not found: ${backendPath}`);
     }
 
     // Load the backend module
